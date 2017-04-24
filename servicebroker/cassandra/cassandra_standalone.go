@@ -745,7 +745,8 @@ func loadCassandraResources_Boot(instanceID, serviceBrokerNamespace string, res 
 	yamlTemplates := CassandraTemplateData_Boot
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -787,7 +788,8 @@ func loadCassandraResources_HA(instanceID, serviceBrokerNamespace string, res *c
 	yamlTemplates := CassandraTemplateData_HA
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= HA yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -828,7 +830,7 @@ func (bootRes *cassandraResources_HA) ServiceHostPort(serviceBrokerNamespace str
 
 	client_port := &bootRes.service.Spec.Ports[0]
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", bootRes.service.Name, serviceBrokerNamespace)
+	host := fmt.Sprintf("%s.%s.%s", bootRes.service.Name, serviceBrokerNamespace, oshandler.ServiceDomainSuffix(false))
 	port := client_port.Port
 
 	return host, port, nil

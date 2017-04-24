@@ -137,6 +137,13 @@ func OC() *OpenshiftClient {
 	return theOC
 }
 
+func ServiceDomainSuffix(prefixedWithDot bool) string {
+	if prefixedWithDot {
+		return svcDomainSuffixWithDot
+	}
+	return svcDomainSuffix
+}
+
 func EndPointSuffix() string {
 	return endpointSuffix
 }
@@ -226,7 +233,10 @@ func KafkaVolumeImage() string {
 }
 
 var theOC *OpenshiftClient
+
+var svcDomainSuffix string
 var endpointSuffix string
+var svcDomainSuffixWithDot string
 
 var etcdImage string
 var etcdVolumeImage string
@@ -257,6 +267,12 @@ func init() {
 		getenv("OPENSHIFTPASS"),
 		getenv("SBNAMESPACE"),
 	)
+
+	svcDomainSuffix = getenv("SERVICEDOMAINSUFFIX")
+	if svcDomainSuffix == "" {
+		svcDomainSuffix = "svc.cluster.local"
+	}
+	svcDomainSuffixWithDot = "." + svcDomainSuffix
 
 	endpointSuffix = getenv("ENDPOINTSUFFIX")
 	etcdImage = getenv("ETCDIMAGE")

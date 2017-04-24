@@ -436,7 +436,7 @@ func loadMongoResources_Master(instanceID, serviceBrokerNamespace, mongoUser, mo
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("#ADMINUSER#"), []byte(mongoUser), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("#ADMINPASSWORD#"), []byte(mongoPassword), -1)
-	//yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace + ".svc.cluster.local"), -1)
+	//yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("pvcname*****node0"), []byte(nodePvcName0), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("pvcname*****node1"), []byte(nodePvcName1), -1)
@@ -478,7 +478,7 @@ func (masterRes *MongoResources_Master) ServiceHostPort(serviceBrokerNamespace s
 
 	port := strconv.Itoa(client_port.Port)
 
-	postfix := fmt.Sprintf("%s.svc.cluster.local:%s", serviceBrokerNamespace, port)
+	postfix := fmt.Sprintf("%s.%s:%s", serviceBrokerNamespace, oshandler.ServiceDomainSuffix(false), port)
 
 	host := fmt.Sprintf("%s.%s;%s.%s;%s.%s",
 		masterRes.svc1.Name, postfix,

@@ -370,7 +370,7 @@ func (esResources_HA *esResources_HA) ServiceHostPort(serviceBrokerNamespace str
 		return "", "", errors.New("client port not found")
 	}
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", esResources_HA.svc.Name, serviceBrokerNamespace)
+	host := fmt.Sprintf("%s.%s.%s", esResources_HA.svc.Name, serviceBrokerNamespace, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(client_port.Port)
 
 	return host, port, nil
