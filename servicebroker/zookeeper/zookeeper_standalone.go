@@ -422,7 +422,8 @@ func loadZookeeperResources_Master(instanceID, serviceBrokerNamespace, zookeeper
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("super:password-place-holder"), []byte(zoo_password), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -462,7 +463,7 @@ func (masterRes *ZookeeperResources_Master) ServiceHostPort(serviceBrokerNamespa
 		return "", "", errors.New("client port not found")
 	}
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", masterRes.service.Name, serviceBrokerNamespace)
+	host := fmt.Sprintf("%s.%s.%s", masterRes.service.Name, serviceBrokerNamespace, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(client_port.Port)
 
 	return host, port, nil

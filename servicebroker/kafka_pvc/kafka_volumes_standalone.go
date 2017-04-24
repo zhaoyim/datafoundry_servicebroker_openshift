@@ -338,12 +338,12 @@ func (handler *Kafka_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 
 	fmt.Println("kafka_port:", kafka_port.Port)
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", kafka_res.svc3.Name, myServiceInfo.Database)
+	host := fmt.Sprintf("%s.%s.%s", kafka_res.svc3.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(kafka_port.Port)
 
 	mycredentials := oshandler.Credentials{
 		Uri: fmt.Sprintf("kafka: %s:%s zookeeper: %s:%s",
-			host, port, zk_host, zk_port),
+		host, port, zk_host, zk_port),
 		Hostname: host,
 		Port:     port,
 	}

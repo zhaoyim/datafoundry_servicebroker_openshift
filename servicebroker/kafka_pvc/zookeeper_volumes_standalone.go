@@ -236,7 +236,7 @@ func (masterRes *ZookeeperResources_Master) ServiceHostPort(serviceBrokerNamespa
 		return "", "", errors.New("client port not found")
 	}
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", masterRes.svc4.Name, serviceBrokerNamespace)
+	host := fmt.Sprintf("%s.%s.%s", masterRes.svc4.Name, serviceBrokerNamespace, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(client_port.Port)
 
 	return host, port, nil

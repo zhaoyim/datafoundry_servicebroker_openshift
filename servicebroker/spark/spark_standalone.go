@@ -268,7 +268,7 @@ func (handler *Spark_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 	// todo: check if pods are created and running, return error on false.
 
 	//master_host := master_res.webroute.Spec.Host
-	master_host := fmt.Sprintf("%s.%s.svc.cluster.local", master_res.mastersvc.Name, myServiceInfo.Database)
+	master_host := fmt.Sprintf("%s.%s.%s", master_res.mastersvc.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	master_port := strconv.Itoa(master_res.mastersvc.Spec.Ports[0].Port)
 	master_uri := "spark://" + net.JoinHostPort(master_host, master_port)
 	zeppelin_host := zeppelin_res.route.Spec.Host
@@ -505,7 +505,8 @@ func loadSparkResources_Master(instanceID, serviceBrokerNamespace, sparkSecret s
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("pass*****"), []byte(sparkSecret), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -552,7 +553,8 @@ func loadSparkResources_Workers(instanceID, serviceBrokerNamespace, sparkSecret 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("pass*****"), []byte(sparkSecret), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("num-workers-place-holder"), []byte(strconv.Itoa(numWorkers)), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= HA yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -604,7 +606,8 @@ func loadSparkResources_Zeppelin(instanceID, serviceBrokerNamespace, sparkSecret
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("pass*****"), []byte(sparkSecret), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= HA yamlTemplates ===========")
 	//println(string(yamlTemplates))

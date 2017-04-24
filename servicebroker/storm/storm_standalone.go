@@ -266,7 +266,7 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 		return brokerapi.Binding{}, oshandler.Credentials{}, errors.New("storm-nimbus-port port not found")
 	}
 
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", nimbus_res.service.Name, myServiceInfo.Database)
+	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(storm_nimbus_port.Port)
 	//host := nimbus_res.routeMQ.Spec.Host
 	//port := "80"
@@ -469,7 +469,8 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 	yamlTemplates := StormTemplateData_Nimbus
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -520,7 +521,8 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 	yamlTemplates := StormTemplateData_UiSuperviser
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"), []byte(serviceBrokerNamespace+".svc.cluster.local"), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
+		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))

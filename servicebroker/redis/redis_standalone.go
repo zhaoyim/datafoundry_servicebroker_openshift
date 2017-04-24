@@ -239,7 +239,7 @@ func (handler *Redis_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 	//}
 
 	cluser_name := "cluster-" + more_res.serviceSentinel.Name
-	host := fmt.Sprintf("%s.%s.svc.cluster.local", more_res.serviceSentinel.Name, myServiceInfo.Database)
+	host := fmt.Sprintf("%s.%s.%s", more_res.serviceSentinel.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(client_port.Port)
 	//host := master_res.routeMQ.Spec.Host
 	//port := "80"
