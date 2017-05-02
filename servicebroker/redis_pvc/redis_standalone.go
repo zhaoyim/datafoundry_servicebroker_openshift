@@ -223,6 +223,10 @@ func (handler *Redis_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -425,6 +429,32 @@ func (handler *Redis_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var more_res redisResources_More
+	err := loadRedisResources_More(myServiceInfo.Url, myServiceInfo.Password, myServiceInfo.Volumes, &more_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	client_port := &more_res.serviceSentinel.Spec.Ports[0]
+
+	cluser_name := "cluster-" + more_res.serviceSentinel.Name
+	host := fmt.Sprintf("%s.%s.%s", more_res.serviceSentinel.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	port := strconv.Itoa(client_port.Port)
+	//host := master_res.routeMQ.Spec.Host
+	//port := "80"
+
+	return oshandler.Credentials{
+		Uri:      "",
+		Hostname: host,
+		Port:     port,
+		//Username: myServiceInfo.User,
+		Password: myServiceInfo.Password,
+		Name:     cluser_name,
+	}
 }
 
 func (handler *Redis_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
