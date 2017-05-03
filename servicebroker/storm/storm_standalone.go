@@ -150,6 +150,10 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -233,6 +237,54 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var zookeeper_res zookeeper.ZookeeperResources_Master
+	err := zookeeper.LoadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, &zookeeper_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	zk_host, zk_port, err := zookeeper_res.ServiceHostPort(myServiceInfo.Database)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	var uisuperviser_res stormResources_UiSuperviser
+	err = loadStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database /*, stormUser, stormPassword*/, &uisuperviser_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	ui_host := uisuperviser_res.uiroute.Spec.Host
+	ui_port := "80"
+
+	var nimbus_res stormResources_Nimbus
+	err = loadStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database /*, stormUser, stormPassword*/, &nimbus_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	storm_nimbus_port := oshandler.GetServicePortByName(&nimbus_res.service, "storm-nimbus-port")
+	if storm_nimbus_port == nil {
+		return oshandler.Credentials{}
+	}
+
+	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	port := strconv.Itoa(storm_nimbus_port.Port)
+	//host := nimbus_res.routeMQ.Spec.Host
+	//port := "80"
+
+	return oshandler.Credentials{
+		Uri:      fmt.Sprintf("storm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", host, port, ui_host, ui_port, zk_host, zk_port),
+		Hostname: host,
+		Port:     port,
+		//Username: myServiceInfo.User,
+		//Password: myServiceInfo.Password,
+		// todo: need return zookeeper password?
+	}
 }
 
 func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
