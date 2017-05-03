@@ -229,12 +229,20 @@ func (handler *Redis_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 
 // please note: the bsi may be still not fully initialized when calling the function.
 func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	println("aaa")
+	
 	var more_res redisResources_More
 	err := loadRedisResources_More(myServiceInfo.Url, myServiceInfo.Password, &more_res)
+
+
+	println("bbb, " err.Error())
+
 	if err != nil {
 		return oshandler.Credentials{}
 	}
 
+	println("ccc")
+	
 	client_port := &more_res.serviceSentinel.Spec.Ports[0]
 
 	cluser_name := "cluster-" + more_res.serviceSentinel.Name
