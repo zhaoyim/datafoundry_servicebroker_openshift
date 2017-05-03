@@ -235,7 +235,7 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.C
 	err := loadRedisResources_More(myServiceInfo.Url, myServiceInfo.Password, &more_res)
 
 
-	println("bbb, " err.Error())
+	println("bbb, ", err.Error())
 
 	if err != nil {
 		return oshandler.Credentials{}
