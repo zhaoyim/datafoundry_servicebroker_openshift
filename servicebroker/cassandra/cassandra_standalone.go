@@ -110,6 +110,11 @@ func (handler *Cassandra_sampleHandler) DoProvision(etcdSaveResult chan error, i
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	// the credentials are created on binding cassandra
+	// serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 

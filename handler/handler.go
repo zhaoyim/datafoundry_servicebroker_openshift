@@ -268,7 +268,7 @@ func init() {
 		getenv("SBNAMESPACE"),
 	)
 
-	svcDomainSuffix = getenv("SERVICEDOMAINSUFFIX")
+	svcDomainSuffix = os.Getenv("SERVICEDOMAINSUFFIX")
 	if svcDomainSuffix == "" {
 		svcDomainSuffix = "svc.cluster.local"
 	}
