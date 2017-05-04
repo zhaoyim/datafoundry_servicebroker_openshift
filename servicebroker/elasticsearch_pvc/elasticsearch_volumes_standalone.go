@@ -171,6 +171,10 @@ func (handler *Elasticsearch_handler) DoProvision(etcdSaveResult chan error, ins
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -254,6 +258,27 @@ func (handler *Elasticsearch_handler) DoDeprovision(myServiceInfo *oshandler.Ser
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var ha_res esResources_HA
+	err := loadESResources_HA(myServiceInfo.Url, myServiceInfo.Volumes, &ha_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	es_host, es_port, err := ha_res.ServiceHostPort(myServiceInfo.Database)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+	es_uri := fmt.Sprintf("http://%s:%s", es_host, es_port)
+
+	return oshandler.Credentials{
+		Uri:      es_uri,
+		Hostname: es_host,
+		Port:     es_port,
+	}
 }
 
 func (handler *Elasticsearch_handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {

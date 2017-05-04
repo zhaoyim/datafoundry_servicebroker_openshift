@@ -179,6 +179,10 @@ func (handler *Spark_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceSpec.DashboardURL = master_web_uri
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -256,6 +260,39 @@ func (handler *Spark_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var master_res sparkResources_Master
+	err := loadSparkResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Password, &master_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	var zeppelin_res sparkResources_Zeppelin
+	err = loadSparkResources_Zeppelin(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Password, &zeppelin_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	// todo: check if pods are created and running, return error on false.
+
+	//master_host := master_res.webroute.Spec.Host
+	master_host := fmt.Sprintf("%s.%s.%s", master_res.mastersvc.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	master_port := strconv.Itoa(master_res.mastersvc.Spec.Ports[0].Port)
+	master_uri := "spark://" + net.JoinHostPort(master_host, master_port)
+	zeppelin_host := zeppelin_res.route.Spec.Host
+	zeppelin_port := "80"
+	zeppelin_uri := "http://" + net.JoinHostPort(zeppelin_host, zeppelin_port)
+
+	return oshandler.Credentials{
+		Uri:      fmt.Sprintf("spark: %s zeppelin: %s", master_uri, zeppelin_uri),
+		Hostname: master_host,
+		Port:     master_port,
+		Username: "",
+		Password: myServiceInfo.Password,
+	}
 }
 
 func (handler *Spark_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {

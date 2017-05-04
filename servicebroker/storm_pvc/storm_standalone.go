@@ -150,6 +150,11 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	// storm pvc has not implemented yet.
+	// serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 

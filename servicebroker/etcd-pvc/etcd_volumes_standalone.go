@@ -178,6 +178,10 @@ func (handler *Etcd_sampleHandler) DoProvision(etcdSaveResult chan error, instan
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -259,6 +263,40 @@ func (handler *Etcd_sampleHandler) DoDeprovision(myServiceInfo *oshandler.Servic
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var ha_res etcdResources_HA
+	err := loadEtcdResources_HA(myServiceInfo.Url, myServiceInfo.Admin_password, myServiceInfo.Volumes, &ha_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	//if err != nil {
+	//	return brokerapi.Binding{}, oshandler.Credentials{}, err
+	//}
+	if ha_res.route.Name == "" {
+		return oshandler.Credentials{}
+	}
+
+	//if len(boot_res.service.Spec.Ports) == 0 {
+	//	err := errors.New("no ports in boot service")
+	//	logger.Error("", err)
+	//	return brokerapi.Binding{}, Credentials{}, err
+	//}
+
+	etcd_addr, host, port := ha_res.endpoint()
+	println("etcd addr: ", etcd_addr)
+	//etcd_addrs := []string{etcd_addr}
+
+	return oshandler.Credentials{
+		Uri:      etcd_addr,
+		Hostname: host,
+		Port:     port,
+		Username: myServiceInfo.Admin_user,
+		Password: myServiceInfo.Admin_password,
+	}
 }
 
 func (handler *Etcd_sampleHandler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {

@@ -190,6 +190,10 @@ func (handler *Kafka_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceSpec.DashboardURL = ""
 
+	//>>>
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	//<<<
+
 	return serviceSpec, serviceInfo, nil
 }
 
@@ -302,6 +306,42 @@ func (handler *Kafka_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 	}()
 
 	return brokerapi.IsAsync(false), nil
+}
+
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	var zookeeper_res ZookeeperResources_Master
+	err := loadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Volumes, &zookeeper_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	//get big service ip port
+	zk_host, zk_port, err := zookeeper_res.ServiceHostPort(myServiceInfo.Database)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	var kafka_res kafkaResources_Master
+	err = loadKafkaResources_Master(myServiceInfo.Url, myServiceInfo.Database, &kafka_res, myServiceInfo.Volumes)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	kafka_port := oshandler.GetServicePortByName(&kafka_res.svc3, "9092-tcp")
+	if kafka_port == nil {
+		return oshandler.Credentials{}
+	}
+
+	host := fmt.Sprintf("%s.%s.%s", kafka_res.svc3.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	port := strconv.Itoa(kafka_port.Port)
+
+	return oshandler.Credentials{
+		Uri: fmt.Sprintf("kafka: %s:%s zookeeper: %s:%s",
+		host, port, zk_host, zk_port),
+		Hostname: host,
+		Port:     port,
+	}
 }
 
 func (handler *Kafka_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
