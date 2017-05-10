@@ -32,6 +32,8 @@ spec:
         image: http://storm-image-place-holder/storm-openshift-orchestration
         imagePullPolicy: IfNotPresent
         env:
+        - name: DNSMASQ_SERVER
+          value: "dnsmasq*****"
         - name: CONFIGURE_ZOOKEEPER
           value: "true"
         - name: STORM_CMD

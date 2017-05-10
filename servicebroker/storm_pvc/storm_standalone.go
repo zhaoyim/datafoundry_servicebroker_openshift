@@ -476,6 +476,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
 		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("dnsmasq*****"), []byte(oshandler.DnsmasqServer()), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))

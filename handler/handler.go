@@ -144,6 +144,10 @@ func ServiceDomainSuffix(prefixedWithDot bool) string {
 	return svcDomainSuffix
 }
 
+func DnsmasqServer() string {
+	return dnsmasqServer
+}
+
 func EndPointSuffix() string {
 	return endpointSuffix
 }
@@ -238,6 +242,8 @@ var svcDomainSuffix string
 var endpointSuffix string
 var svcDomainSuffixWithDot string
 
+var dnsmasqServer string
+
 var etcdImage string
 var etcdVolumeImage string
 var etcdbootImage string
@@ -273,6 +279,8 @@ func init() {
 		svcDomainSuffix = "svc.cluster.local"
 	}
 	svcDomainSuffixWithDot = "." + svcDomainSuffix
+
+	dnsmasqServer = getenv("DNSMASQ_SERVER")
 
 	endpointSuffix = getenv("ENDPOINTSUFFIX")
 	etcdImage = getenv("ETCDIMAGE")
