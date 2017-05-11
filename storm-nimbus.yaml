@@ -13,6 +13,21 @@ spec:
 ---
 
 apiVersion: v1
+kind: Service
+metadata:
+  name: sb-instanceid-stormnp
+spec:
+  type: NodePort
+  selector:
+    sb-instanceid-storm: nimbus
+  ports:
+  - name: storm-nimbus-port
+    protocol: TCP
+    port: 6627
+
+---
+
+apiVersion: v1
 kind: ReplicationController
 metadata:
   name: sb-instanceid-stormnb

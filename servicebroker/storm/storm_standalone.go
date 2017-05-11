@@ -151,7 +151,7 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceSpec.DashboardURL = ""
 
 	//>>>
-	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, false)
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -173,6 +173,14 @@ func (handler *Storm_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 
 	nimbus_res, _ := getStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database)             //, myServiceInfo.User, myServiceInfo.Password)
 	uisuperviser_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
+
+	nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
+	if nodeport == nil || nodeport.NodePort < 0  {
+		return brokerapi.LastOperation{
+			State:       brokerapi.InProgress,
+			Description: "In progress ..",
+		}, nil
+	}
 
 	//ok := func(rc *kapi.ReplicationController) bool {
 	//	if rc == nil || rc.Name == "" || rc.Spec.Replicas == nil || rc.Status.Replicas < *rc.Spec.Replicas {
@@ -240,7 +248,7 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 }
 
 // please note: the bsi may be still not fully initialized when calling the function.
-func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, needNodePort bool) oshandler.Credentials {
 	var zookeeper_res zookeeper.ZookeeperResources_Master
 	err := zookeeper.LoadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, &zookeeper_res)
 	if err != nil {
@@ -272,13 +280,22 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.C
 		return oshandler.Credentials{}
 	}
 
+	var nodeportAddr string
+	if needNodePort {
+		nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
+		if nodeport == nil || nodeport.NodePort < 0  {
+			return oshandler.Credentials{}
+		}
+		nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
+	}
+
 	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(storm_nimbus_port.Port)
 	//host := nimbus_res.routeMQ.Spec.Host
 	//port := "80"
 
 	return oshandler.Credentials{
-		Uri:      fmt.Sprintf("storm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", host, port, ui_host, ui_port, zk_host, zk_port),
+		Uri:      fmt.Sprintf("%sstorm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", nodeportAddr, host, port, ui_host, ui_port, zk_host, zk_port),
 		Hostname: host,
 		Port:     port,
 		//Username: myServiceInfo.User,
@@ -318,13 +335,20 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 		return brokerapi.Binding{}, oshandler.Credentials{}, errors.New("storm-nimbus-port port not found")
 	}
 
+	var nodeportAddr string
+	nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
+	if nodeport != nil || nodeport.NodePort < 0  {
+		return brokerapi.Binding{}, oshandler.Credentials{}, errors.New("nodeport not ready")
+	}
+	nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
+
 	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(storm_nimbus_port.Port)
 	//host := nimbus_res.routeMQ.Spec.Host
 	//port := "80"
 
 	mycredentials := oshandler.Credentials{
-		Uri:      fmt.Sprintf("storm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", host, port, ui_host, ui_port, zk_host, zk_port),
+		Uri:      fmt.Sprintf("%sstorm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", nodeportAddr, host, port, ui_host, ui_port, zk_host, zk_port),
 		Hostname: host,
 		Port:     port,
 		//Username: myServiceInfo.User,
@@ -525,6 +549,8 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("dnsmasq*****"), []byte(oshandler.DnsmasqServer()), -1)
 
+	// oshandler.RandomNodeAddress()
+
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
 	//println()
@@ -532,6 +558,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 	decoder := oshandler.NewYamlDecoder(yamlTemplates)
 	decoder.
 		Decode(&res.service).
+		Decode(&res.nodeport).
 		Decode(&res.rc)
 
 	return decoder.Err
@@ -592,8 +619,9 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 }
 
 type stormResources_Nimbus struct {
-	service kapi.Service
-	rc      kapi.ReplicationController
+	service  kapi.Service
+	nodeport kapi.Service
+	rc       kapi.ReplicationController
 }
 
 type stormResources_UiSuperviser struct {
@@ -628,6 +656,10 @@ func (job *stormOrchestrationJob) createStormResources_Nimbus(instanceId, servic
 	*/
 
 	err = job.kpost(serviceBrokerNamespace, "services", &input.service, &output.service)
+	if err != nil {
+		return &output, err
+	}
+	err = job.kpost(serviceBrokerNamespace, "services", &input.nodeport, &output.nodeport)
 	if err != nil {
 		return &output, err
 	}
@@ -666,6 +698,7 @@ func getStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, 
 	prefix := "/namespaces/" + serviceBrokerNamespace
 	osr.
 		KGet(prefix+"/services/"+input.service.Name, &output.service).
+		KGet(prefix+"/services/"+input.nodeport.Name, &output.nodeport).
 		KGet(prefix+"/replicationcontrollers/"+input.rc.Name, &output.rc)
 
 	if osr.Err != nil {
@@ -676,9 +709,10 @@ func getStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, 
 }
 
 func destroyStormResources_Nimbus(nimbusRes *stormResources_Nimbus, serviceBrokerNamespace string) {
-	// todo: add to retry queue on fail
+	// todo: add to retry queue on failnodeport
 
 	go func() { kdel(serviceBrokerNamespace, "services", nimbusRes.service.Name) }()
+	go func() { kdel(serviceBrokerNamespace, "services", nimbusRes.nodeport.Name) }()
 	go func() { kdel_rc(serviceBrokerNamespace, &nimbusRes.rc) }()
 }
 

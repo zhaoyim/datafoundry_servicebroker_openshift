@@ -9,7 +9,14 @@ import (
 	"github.com/pivotal-cf/brokerapi"
 	"io"
 	"os"
+	mathrand "math/rand"
+	"time"
+	"strings"
 )
+
+func init() {
+	mathrand.Seed(time.Now().UnixNano())
+}
 
 const (
 	VolumeType_EmptyDir = ""    // DON'T change
@@ -32,6 +39,9 @@ type ServiceInfo struct {
 	//
 	// will be replaced by
 	Volumes []Volume `json:"volumes,omitempty"`
+
+	// for different bs, the meaning is different
+	// Miscs map[string]string `json:"miscs,omitempty"`
 }
 
 type Volume struct {
@@ -144,6 +154,13 @@ func ServiceDomainSuffix(prefixedWithDot bool) string {
 	return svcDomainSuffix
 }
 
+func RandomNodeAddress() string {
+	if len(nodeAddresses) == 0 {
+		return ""
+	}
+	return nodeAddresses[mathrand.Intn(len(nodeAddresses))]
+}
+
 func DnsmasqServer() string {
 	return dnsmasqServer
 }
@@ -242,6 +259,7 @@ var svcDomainSuffix string
 var endpointSuffix string
 var svcDomainSuffixWithDot string
 
+var nodeAddresses []string
 var dnsmasqServer string
 
 var etcdImage string
@@ -279,6 +297,8 @@ func init() {
 		svcDomainSuffix = "svc.cluster.local"
 	}
 	svcDomainSuffixWithDot = "." + svcDomainSuffix
+
+	nodeAddresses = strings.Split(getenv("NODE_ADDRESSES"), ",")
 
 	dnsmasqServer = getenv("DNSMASQ_SERVER")
 
