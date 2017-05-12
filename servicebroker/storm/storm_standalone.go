@@ -338,9 +338,10 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 	var nodeportAddr string
 	nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
 	if nodeport != nil || nodeport.NodePort < 0  {
-		return brokerapi.Binding{}, oshandler.Credentials{}, errors.New("nodeport not ready")
+		nodeportAddr = "external-address: not available, "
+	} else {
+		nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
 	}
-	nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
 
 	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(storm_nimbus_port.Port)
