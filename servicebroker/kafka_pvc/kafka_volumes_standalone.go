@@ -155,6 +155,7 @@ func (handler *Kafka_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		err = <-result
 		if err != nil {
 			logger.Error("zookeeper create volume err:", err)
+			handler.DoDeprovision(&serviceInfo, true)
 			return
 		}
 
@@ -489,6 +490,7 @@ func (job *kafkaOrchestrationJob) run() {
 		err := <-result
 		if err != nil {
 			logger.Error("kafka create volume err:", err)
+			(&Kafka_Handler{}).DoDeprovision(job.serviceInfo, true)
 			return
 		}
 

@@ -176,6 +176,7 @@ func (handler *Mongo_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		err = <-result
 		if err != nil {
 			logger.Error("mongo create volume", err)
+			handler.DoDeprovision(&serviceInfo, true)
 			return
 		}
 

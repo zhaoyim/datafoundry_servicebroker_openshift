@@ -178,6 +178,7 @@ func (handler *Zookeeper_Handler) DoProvision(etcdSaveResult chan error, instanc
 		err = <-result
 		if err != nil {
 			logger.Error("zookeeper create volume", err)
+			handler.DoDeprovision(&serviceInfo, true)
 			return
 		}
 

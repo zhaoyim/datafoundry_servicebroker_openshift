@@ -174,6 +174,7 @@ func (handler *Rabbitmq_Handler) DoProvision(etcdSaveResult chan error, instance
 		err = <-result
 		if err != nil {
 			logger.Error("rabbitmq create volume", err)
+			handler.DoDeprovision(&serviceInfo, true)
 			return
 		}
 

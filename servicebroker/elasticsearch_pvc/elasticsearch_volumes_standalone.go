@@ -143,6 +143,7 @@ func (handler *Elasticsearch_handler) DoProvision(etcdSaveResult chan error, ins
 		err = <-result
 		if err != nil {
 			logger.Error("elasticsearch create volume", err)
+			oshandler.DeleteVolumns(serviceInfo.Database, serviceInfo.Volumes)
 			return
 		}
 

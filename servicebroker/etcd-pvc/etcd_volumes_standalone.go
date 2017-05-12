@@ -139,8 +139,8 @@ func (handler *Etcd_sampleHandler) DoProvision(etcdSaveResult chan error, instan
 		if err != nil {
 			return
 		}
-		// create volume
 
+		// create volume
 		result := oshandler.StartCreatePvcVolumnJob(
 			volumeBaseName,
 			serviceInfo.Database,
@@ -149,7 +149,8 @@ func (handler *Etcd_sampleHandler) DoProvision(etcdSaveResult chan error, instan
 
 		err = <-result
 		if err != nil {
-			logger.Error("etcd create volume", err)
+			logger.Error("etcd create volume (to delete created ones)", err)
+			handler.DoDeprovision(&serviceInfo, true)
 			return
 		}
 
