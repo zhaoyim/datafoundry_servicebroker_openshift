@@ -20,7 +20,6 @@ import (
 	"github.com/pivotal-golang/lager"
 	"golang.org/x/net/context"
 
-
 	oshandler "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/handler"
 	bsiapi "github.com/openshift/origin/backingserviceinstance/api/v1"
 
@@ -43,6 +42,7 @@ import (
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/etcd-pvc"
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/kafka_pvc"
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/mongo_pvc"
+	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/neo4j_pvc"
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/rabbitmq_pvc"
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/redis_pvc"
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/storm_pvc"
@@ -807,7 +807,7 @@ func getBsiInfo(w http.ResponseWriter, r *http.Request) {
 	// 3. list unregistered BSIs (expected none)
 	// 4. list registered but no real BSI corresponded (expected many)
 	// 5. create curl command list to release above resources
-	//    create 
+	//    create
 
 	// ...
 
@@ -834,7 +834,7 @@ func getBsiInfo(w http.ResponseWriter, r *http.Request) {
 	println("========================== get all registered instances")
 
 	{
-		instancesPrefix := "/servicebroker/"+servcieBrokerName+"/instance/"
+		instancesPrefix := "/servicebroker/" + servcieBrokerName + "/instance/"
 
 		resp, err := etcdapi.Get(context.Background(), instancesPrefix[:len(instancesPrefix)-1], &client.GetOptions{Recursive: true}) //改为环境变量
 		if err != nil {
@@ -849,7 +849,6 @@ func getBsiInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
 
 /*
 
@@ -950,4 +949,3 @@ func getBsiInfo(w http.ResponseWriter, r *http.Request) {
 	json.Unmarshal([]byte(resp.Node.Value), &myServiceInfo)
 
 */
-
