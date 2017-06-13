@@ -236,6 +236,10 @@ func KafkaVolumeImage() string {
 	return kafkaVolumeImage
 }
 
+func Neo4jVolumeImage() string {
+	return neo4jVolumeImage
+}
+
 var theOC *OpenshiftClient
 
 var svcDomainSuffix string
@@ -265,6 +269,7 @@ var pyspiderImage string
 var elasticsearchVolumeImage string
 var mongoVolumeImage string
 var kafkaVolumeImage string
+var neo4jVolumeImage string
 
 func init() {
 	theOC = newOpenshiftClient(
@@ -304,4 +309,5 @@ func init() {
 	elasticsearchVolumeImage = getenv("ELASTICSEARCHVOLUMEIMAGE")
 	mongoVolumeImage = getenv("MONGOVOLUMEIMAGE")
 	kafkaVolumeImage = getenv("KAFKAVOLUMEIMAGE")
+	neo4jVolumeImage = getenv("NEO4JVOLUMEIMAGE")
 }
