@@ -54,7 +54,7 @@ metadata:
 spec:
   host: sb-instanceid-neo4j-admin.endpoint-postfix-place-holder
   port:
-    targetPort: admin
+    targetPort: neo4j-http-port
   to:
     kind: Service
     name: sb-instanceid-neo4j
