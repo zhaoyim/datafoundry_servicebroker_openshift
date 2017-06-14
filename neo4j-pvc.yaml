@@ -80,7 +80,7 @@ kind: Service
 metadata:
   labels:
     servicebroker: sb-instanceid-neo4j
-  name: sb-instanceid-neo4j-bolt
+  name: sb-instanceid-n4jblt
 spec:
   type: NodePort
   ports:
