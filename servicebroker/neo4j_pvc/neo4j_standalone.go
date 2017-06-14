@@ -426,7 +426,8 @@ func loadNeo4jResources_Master(instanceID, neo4jUser, neo4jPassword string, volu
 		Decode(&res.rc).
 		Decode(&res.routeAdmin).
 		//Decode(&res.routeMQ).
-		Decode(&res.service)
+		Decode(&res.service).
+		Decode(&res.servicebolt)
 
 	return decoder.Err
 }
@@ -435,7 +436,8 @@ type neo4jResources_Master struct {
 	rc         kapi.ReplicationController
 	routeAdmin routeapi.Route
 	//routeMQ    routeapi.Route
-	service kapi.Service
+	service     kapi.Service
+	servicebolt kapi.Service
 }
 
 func createNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, neo4jPassword string, volumes []oshandler.Volume) (*neo4jResources_Master, error) {
@@ -455,7 +457,8 @@ func createNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, 
 		KPost(prefix+"/replicationcontrollers", &input.rc, &output.rc).
 		OPost(prefix+"/routes", &input.routeAdmin, &output.routeAdmin).
 		//OPost(prefix + "/routes", &input.routeMQ, &output.routeMQ).
-		KPost(prefix+"/services", &input.service, &output.service)
+		KPost(prefix+"/services", &input.service, &output.service).
+		KPost(prefix+"/services", &input.servicebolt, &output.servicebolt)
 
 	if osr.Err != nil {
 		logger.Error("createNeo4jResources_Master", osr.Err)
