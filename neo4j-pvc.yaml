@@ -73,7 +73,6 @@ spec:
     name: neo4j-https-port
   selector:
     servicebroker: sb-instanceid-neo4j
-
 ---
 apiVersion: v1
 kind: Service

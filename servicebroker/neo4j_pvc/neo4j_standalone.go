@@ -483,7 +483,8 @@ func getNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, neo
 		KGet(prefix+"/replicationcontrollers/"+input.rc.Name, &output.rc).
 		OGet(prefix+"/routes/"+input.routeAdmin.Name, &output.routeAdmin).
 		//OGet(prefix + "/routes/" + input.routeMQ.Name, &output.routeMQ).
-		KGet(prefix+"/services/"+input.service.Name, &output.service)
+		KGet(prefix+"/services/"+input.service.Name, &output.service).
+		KGet(prefix+"/services/"+input.servicebolt.Name, &output.servicebolt)
 
 	if osr.Err != nil {
 		logger.Error("getNeo4jResources_Master", osr.Err)
@@ -499,6 +500,7 @@ func destroyNeo4jResources_Master(masterRes *neo4jResources_Master, serviceBroke
 	go func() { odel(serviceBrokerNamespace, "routes", masterRes.routeAdmin.Name) }()
 	//go func() {odel (serviceBrokerNamespace, "routes", masterRes.routeMQ.Name)}()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.service.Name) }()
+	go func() { kdel(serviceBrokerNamespace, "services", masterRes.servicebolt.Name) }()
 }
 
 //===============================================================
