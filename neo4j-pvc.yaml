@@ -71,6 +71,19 @@ spec:
     name: neo4j-http-port
   - port: 7473
     name: neo4j-https-port
+  selector:
+    servicebroker: sb-instanceid-neo4j
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    servicebroker: sb-instanceid-neo4j
+  name: sb-instanceid-neo4j-bolt
+spec:
+  type: NodePort
+  ports:
   - port: 7687
     name: neo4j-bolt-port
   selector:
