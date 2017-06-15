@@ -426,7 +426,8 @@ func loadNeo4jResources_Master(instanceID, neo4jUser, neo4jPassword string, volu
 		Decode(&res.rc).
 		Decode(&res.routeAdmin).
 		//Decode(&res.routeMQ).
-		Decode(&res.service)
+		Decode(&res.service).
+		Decode(&res.servicebolt)
 
 	return decoder.Err
 }
@@ -435,7 +436,8 @@ type neo4jResources_Master struct {
 	rc         kapi.ReplicationController
 	routeAdmin routeapi.Route
 	//routeMQ    routeapi.Route
-	service kapi.Service
+	service     kapi.Service
+	servicebolt kapi.Service
 }
 
 func createNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, neo4jPassword string, volumes []oshandler.Volume) (*neo4jResources_Master, error) {
@@ -455,7 +457,8 @@ func createNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, 
 		KPost(prefix+"/replicationcontrollers", &input.rc, &output.rc).
 		OPost(prefix+"/routes", &input.routeAdmin, &output.routeAdmin).
 		//OPost(prefix + "/routes", &input.routeMQ, &output.routeMQ).
-		KPost(prefix+"/services", &input.service, &output.service)
+		KPost(prefix+"/services", &input.service, &output.service).
+		KPost(prefix+"/services", &input.servicebolt, &output.servicebolt)
 
 	if osr.Err != nil {
 		logger.Error("createNeo4jResources_Master", osr.Err)
@@ -480,7 +483,8 @@ func getNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, neo
 		KGet(prefix+"/replicationcontrollers/"+input.rc.Name, &output.rc).
 		OGet(prefix+"/routes/"+input.routeAdmin.Name, &output.routeAdmin).
 		//OGet(prefix + "/routes/" + input.routeMQ.Name, &output.routeMQ).
-		KGet(prefix+"/services/"+input.service.Name, &output.service)
+		KGet(prefix+"/services/"+input.service.Name, &output.service).
+		KGet(prefix+"/services/"+input.servicebolt.Name, &output.servicebolt)
 
 	if osr.Err != nil {
 		logger.Error("getNeo4jResources_Master", osr.Err)
@@ -496,6 +500,7 @@ func destroyNeo4jResources_Master(masterRes *neo4jResources_Master, serviceBroke
 	go func() { odel(serviceBrokerNamespace, "routes", masterRes.routeAdmin.Name) }()
 	//go func() {odel (serviceBrokerNamespace, "routes", masterRes.routeMQ.Name)}()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.service.Name) }()
+	go func() { kdel(serviceBrokerNamespace, "services", masterRes.servicebolt.Name) }()
 }
 
 //===============================================================
