@@ -42,8 +42,9 @@ type Volume struct {
 //==================
 
 type PlanInfo struct {
-	Volume_size int `json:"volume_type"`
-	Connections int `json:"connections"`
+	Volume_size int                     `json:"volume_type"`
+	Connections int                     `json:"connections"`
+	Customize   map[string]CustomParams `json:"customize"`
 }
 
 type Credentials struct {
@@ -53,6 +54,15 @@ type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+}
+
+type CustomParams struct {
+	Default float64 `json:"default"`
+	Max     float64 `json:"max"`
+	Price   float64 `json:"price"`
+	Unit    string  `json:"unit"`
+	Step    float64 `json:"step"`
+	Desc    string  `json:"desc"`
 }
 
 type HandlerDriver interface {
