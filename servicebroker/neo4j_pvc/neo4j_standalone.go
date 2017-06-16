@@ -217,10 +217,11 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 }
 
 func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
-	if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
+	if planInfo.Customize == nil {
+		finalVolumeSize = planInfo.Volume_size
+	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
 		if details.Parameters == nil {
-			err = errors.New("getVolumeSize:details.Parameters == nil")
-			println(err)
+			finalVolumeSize = int(cus.Default)
 			return
 		}
 		if _, ok := details.Parameters[G_VolumeSize]; !ok {
