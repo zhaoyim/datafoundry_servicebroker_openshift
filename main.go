@@ -347,6 +347,14 @@ func (myBroker *myServiceBroker) LastOperation(instanceID string) (brokerapi.Las
 	return lastOperation, nil
 }
 
+func (myBroker *myServiceBroker) Update(
+	instanceID string,
+	details brokerapi.UpdateDetails,
+	asyncAllowed bool,
+) (brokerapi.IsAsync, error) {
+	return false, errors.New("not implemented yet.")
+}
+
 func (myBroker *myServiceBroker) Deprovision(instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.IsAsync, error) {
 
 	var myServiceInfo handler.ServiceInfo
