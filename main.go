@@ -240,7 +240,7 @@ func (myBroker *myServiceBroker) Provision(
 		return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
 	}
 
-	volumeSize, connections, err := findServicePlanInfo(details.ServiceID, details.PlanID)
+	volumeSize, connections, customization, err := findServicePlanInfo(details.ServiceID, details.PlanID)
 	if err != nil {
 		logger.Error("findServicePlanInfo service "+service_name+" plan "+plan_name, err)
 		return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
@@ -249,6 +249,7 @@ func (myBroker *myServiceBroker) Provision(
 	planInfo := handler.PlanInfo{
 		Volume_size: volumeSize,
 		Connections: connections,
+		Customize:   customization,
 	}
 
 	etcdSaveResult := make(chan error, 1)
@@ -657,14 +658,15 @@ func findServicePlanNameInCatalog(service_id, plan_id string) string {
 	}
 	return resp.Node.Value
 }
-func findServicePlanInfo(service_id, plan_id string) (volumeSize, connections int, err error) {
+func findServicePlanInfo(service_id, plan_id string) (volumeSize, connections int, customization map[string]oshandler.CustomParams, err error) {
 	resp, err := etcdget("/servicebroker/" + servcieBrokerName + "/catalog/" + service_id + "/plan/" + plan_id + "/metadata")
 	if err != nil {
 		return
 	}
 
 	type PlanMetaData struct {
-		Bullets []string `json:"bullets,omitempty"`
+		Bullets   []string                          `json:"bullets,omitempty"`
+		Customize map[string]oshandler.CustomParams `json:"customize,omitempty"`
 	}
 	// metadata '{"bullets":["20 GB of Disk","20 connections"],"displayName":"Shared and Free" }'
 
@@ -688,6 +690,8 @@ func findServicePlanInfo(service_id, plan_id string) (volumeSize, connections in
 			}
 		}
 	}
+
+	customization = meta.Customize
 
 	return
 }
