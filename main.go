@@ -684,13 +684,14 @@ func findServicePlanInfo(details brokerapi.ProvisionDetails) (volumeSize, connec
 
 	// if input parameter also specifies volume size, then use it.
 	if interSize, ok := details.Parameters[G_VolumeSize]; ok {
-		if sSize, ok := interSize.(string); ok {
-			if fSize, e := strconv.ParseFloat(sSize, 64); e != nil {
-				err = e
-				return
-			} else {
-				fVolumeSize = math.Floor(fSize + 0.5)
-			}
+		if sSize, ok := interSize.(string); ! ok {
+			err = errors.New(G_VolumeSize + " is not string.")
+			return
+		} else if fSize, e := strconv.ParseFloat(sSize, 64); e != nil {
+			err = e
+			return
+		} else {
+			fVolumeSize = math.Floor(fSize + 0.5)
 		}
 	}
 
