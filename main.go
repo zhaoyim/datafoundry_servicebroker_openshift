@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"strconv"
@@ -71,6 +72,8 @@ type myCredentials struct {
 	Password string `json:"password"`
 	Name     string `json:"name,omitempty"`
 }
+
+const G_VolumeSize = "volumeSize"
 
 func (myBroker *myServiceBroker) Services() []brokerapi.Service {
 	/*
@@ -250,6 +253,15 @@ func (myBroker *myServiceBroker) Provision(
 		Volume_size: volumeSize,
 		Connections: connections,
 		Customize:   customization,
+	}
+
+	volumeSize, err = getVolumeSize(details, planInfo)
+	if err != nil {
+		logger.Error("getVolumeSize service "+service_name+" plan "+plan_name, err)
+		return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
+	} else {
+		planInfo.Volume_size = volumeSize
+		logger.Debug("getVolumeSize: " + strconv.Itoa(volumeSize) + " service " + service_name + " plan " + plan_name)
 	}
 
 	etcdSaveResult := make(chan error, 1)
@@ -692,6 +704,44 @@ func findServicePlanInfo(service_id, plan_id string) (volumeSize, connections in
 	}
 
 	customization = meta.Customize
+
+	return
+}
+
+func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
+	if planInfo.Customize == nil {
+		//如果没有Customize, finalVolumeSize默认值 planInfo.Volume_size
+		finalVolumeSize = planInfo.Volume_size
+	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
+		if details.Parameters == nil {
+			finalVolumeSize = int(cus.Default)
+			return
+		}
+		if _, ok := details.Parameters[G_VolumeSize]; !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] not exist")
+			println(err)
+			return
+		}
+		sSize, ok := details.Parameters[G_VolumeSize].(string)
+		if !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] cannot be converted to string")
+			println(err)
+			return
+		}
+		fSize, e := strconv.ParseFloat(sSize, 64)
+		if e != nil {
+			println("getVolumeSize: input parameter volumeSize :", sSize, e)
+			err = e
+			return
+		}
+		if fSize > cus.Max {
+			finalVolumeSize = int(cus.Default)
+		} else {
+			finalVolumeSize = int(cus.Default + cus.Step*math.Ceil((fSize-cus.Default)/cus.Step))
+		}
+	} else {
+		finalVolumeSize = planInfo.Volume_size
+	}
 
 	return
 }

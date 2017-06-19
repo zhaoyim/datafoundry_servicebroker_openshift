@@ -30,7 +30,6 @@ import (
 	kapi "k8s.io/kubernetes/pkg/api/v1"
 
 	oshandler "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/handler"
-	"math"
 )
 
 //==============================================================
@@ -38,7 +37,6 @@ import (
 //==============================================================
 
 const Neo4jServcieBrokerName_Standalone = "Neo4j_volumes_standalone"
-const G_VolumeSize = "volumeSize"
 
 func init() {
 	oshandler.Register(Neo4jServcieBrokerName_Standalone, &Neo4j_freeHandler{})
@@ -122,17 +120,17 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	neo4jUser := "neo4j"
 	neo4jPassword := oshandler.GenGUID()
 
-	//如果没有Customize, finalVolumeSize默认值 planInfo.Volume_size
-	finalVolumeSize, err := getVolumeSize(details, planInfo)
-	if err != nil {
-		return serviceSpec, serviceInfo, err
-	}
+	/*
+		finalVolumeSize, err := getVolumeSize(details, planInfo)
+		if err != nil {
+			return serviceSpec, serviceInfo, err
+		}*/
 
 	volumeBaseName := volumeBaseName(instanceIdInTempalte)
 	volumes := []oshandler.Volume{
 		// one peer volume
 		{
-			Volume_size: finalVolumeSize,
+			Volume_size: planInfo.Volume_size,
 			Volume_name: volumeBaseName + "-0",
 		},
 	}
@@ -153,7 +151,7 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	//>> may be not optimized
 	var template neo4jResources_Master
-	err = loadNeo4jResources_Master(
+	err := loadNeo4jResources_Master(
 		serviceInfo.Url,
 		serviceInfo.User,
 		serviceInfo.Password,
@@ -216,7 +214,7 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	return serviceSpec, serviceInfo, nil
 }
 
-func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
+/*func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
 	if planInfo.Customize == nil {
 		finalVolumeSize = planInfo.Volume_size
 	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
@@ -252,6 +250,7 @@ func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanIn
 
 	return
 }
+*/
 
 func (handler *Neo4j_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceInfo) (brokerapi.LastOperation, error) {
 
