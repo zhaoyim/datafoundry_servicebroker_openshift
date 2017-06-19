@@ -54,7 +54,7 @@ type Volume struct {
 type PlanInfo struct {
 	Volume_size int                     `json:"volume_type"`
 	Connections int                     `json:"connections"`
-	Customize   map[string]CustomParams `json:"customize"`
+	//Customize   map[string]CustomParams `json:"customize"`
 }
 
 type Credentials struct {
