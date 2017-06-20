@@ -120,6 +120,12 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	neo4jUser := "neo4j"
 	neo4jPassword := oshandler.GenGUID()
 
+	/*
+		finalVolumeSize, err := getVolumeSize(details, planInfo)
+		if err != nil {
+			return serviceSpec, serviceInfo, err
+		}*/
+
 	volumeBaseName := volumeBaseName(instanceIdInTempalte)
 	volumes := []oshandler.Volume{
 		// one peer volume
@@ -207,6 +213,44 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	return serviceSpec, serviceInfo, nil
 }
+
+/*func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
+	if planInfo.Customize == nil {
+		finalVolumeSize = planInfo.Volume_size
+	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
+		if details.Parameters == nil {
+			finalVolumeSize = int(cus.Default)
+			return
+		}
+		if _, ok := details.Parameters[G_VolumeSize]; !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] not exist")
+			println(err)
+			return
+		}
+		sSize, ok := details.Parameters[G_VolumeSize].(string)
+		if !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] cannot be converted to string")
+			println(err)
+			return
+		}
+		fSize, e := strconv.ParseFloat(sSize, 64)
+		if e != nil {
+			println("getVolumeSize: input parameter volumeSize :", sSize, e)
+			err = e
+			return
+		}
+		if fSize > cus.Max {
+			finalVolumeSize = int(cus.Default)
+		} else {
+			finalVolumeSize = int(cus.Default + cus.Step*math.Ceil((fSize-cus.Default)/cus.Step))
+		}
+	} else {
+		finalVolumeSize = planInfo.Volume_size
+	}
+
+	return
+}
+*/
 
 func (handler *Neo4j_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceInfo) (brokerapi.LastOperation, error) {
 
