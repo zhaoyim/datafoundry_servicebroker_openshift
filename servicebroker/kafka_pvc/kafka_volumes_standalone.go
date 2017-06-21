@@ -62,6 +62,10 @@ func (handler *Kafka_freeHandler) DoLastOperation(myServiceInfo *oshandler.Servi
 	return newKafkaHandler().DoLastOperation(myServiceInfo)
 }
 
+func (handler *Kafka_freeHandler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return newKafkaHandler().DoUpdate(myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
+}
+
 func (handler *Kafka_freeHandler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 	return newKafkaHandler().DoDeprovision(myServiceInfo, asyncAllowed)
 }
@@ -267,6 +271,10 @@ func (handler *Kafka_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 		}, nil
 	}
 
+}
+
+func (handler *Kafka_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return errors.New("not implemented")
 }
 
 func (handler *Kafka_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {

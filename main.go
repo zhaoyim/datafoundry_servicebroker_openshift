@@ -388,7 +388,7 @@ func (myBroker *myServiceBroker) Update(
 	}
 
 	if len(myServiceInfo.Volumes) == 0 {
-		reason := "can't get volume info from the old plan."
+		reason := "can not get volume info from the old plan."
 		logger.Info(reason)
 		return false, errors.New(reason)
 	}
@@ -421,7 +421,7 @@ func (myBroker *myServiceBroker) Update(
 	callbackSaveNewInfo := func(serviceInfo *handler.ServiceInfo) error {
 		//存储隐藏信息_info
 		tmpval, _ := json.Marshal(myServiceInfo)
-		_ err := etcdset("/servicebroker/"+servcieBrokerName+"/instance/"+instanceID+"/_info", string(tmpval))
+		_, err := etcdset("/servicebroker/"+servcieBrokerName+"/instance/"+instanceID+"/_info", string(tmpval))
 		return err
 	}
 
@@ -729,11 +729,6 @@ func (myBroker *myServiceBroker) Unbind(instanceID, bindingID string, details br
 
 	logger.Info("Successful delete binding "+bindingID, nil)
 	return nil
-}
-
-func (myBroker *myServiceBroker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.IsAsync, error) {
-	// Update instance here
-	return brokerapi.IsAsync(false), brokerapi.ErrPlanChangeNotSupported
 }
 
 //定义工具函数

@@ -61,6 +61,10 @@ func (handler *Rabbitmq_freeHandler) DoLastOperation(myServiceInfo *oshandler.Se
 	return newRabbitmqHandler().DoLastOperation(myServiceInfo)
 }
 
+func (handler *Rabbitmq_freeHandler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return newRabbitmqHandler().DoUpdate(myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
+}
+
 func (handler *Rabbitmq_freeHandler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 	return newRabbitmqHandler().DoDeprovision(myServiceInfo, asyncAllowed)
 }
@@ -258,6 +262,10 @@ func (handler *Rabbitmq_Handler) DoLastOperation(myServiceInfo *oshandler.Servic
 			Description: "In progress.",
 		}, nil
 	}
+}
+
+func (handler *Rabbitmq_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return errors.New("not implemented")
 }
 
 func (handler *Rabbitmq_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {

@@ -222,6 +222,10 @@ func (handler *Elasticsearch_handler) DoLastOperation(myServiceInfo *oshandler.S
 	}
 }
 
+func (handler *Elasticsearch_handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return errors.New("not implemented")
+}
+
 func (handler *Elasticsearch_handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 
 	go func() {
