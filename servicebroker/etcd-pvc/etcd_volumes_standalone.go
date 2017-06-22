@@ -2,15 +2,15 @@ package etcd
 
 import (
 	"fmt"
-	"errors"
 	//marathon "github.com/gambol99/go-marathon"
 	//kapi "golang.org/x/build/kubernetes/api"
 	//"golang.org/x/build/kubernetes"
 	//"golang.org/x/oauth2"
 	//"net/http"
-	"github.com/pivotal-cf/brokerapi"
 	"net"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"strconv"
 	"bytes"
 	"encoding/json"
@@ -228,7 +228,34 @@ func (handler *Etcd_sampleHandler) DoLastOperation(myServiceInfo *oshandler.Serv
 }
 
 func (handler *Etcd_sampleHandler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
-	return errors.New("not implemented")
+	go func() {
+		// Update volume
+		volumeBaseName := volumeBaseName(myServiceInfo.Url)
+		result := oshandler.StartExpandPvcVolumnJob(
+			volumeBaseName,
+			myServiceInfo.Database,
+			myServiceInfo.Volumes,
+			planInfo.Volume_size,
+		)
+
+		err := <-result
+		if err != nil {
+			logger.Error("etcd expand volume error", err)
+			return
+		}
+
+		println("etcd expand volumens done")
+
+		for i := range myServiceInfo.Volumes {
+			myServiceInfo.Volumes[i].Volume_size = planInfo.Volume_size
+		}
+		err = callbackSaveNewInfo(myServiceInfo)
+		if err != nil {
+			logger.Error("etcd expand volume succeeded but save info error", err)
+		}
+	}()
+
+	return nil
 }
 
 func (handler *Etcd_sampleHandler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
@@ -349,7 +376,6 @@ func (handler *Etcd_sampleHandler) DoUnbind(myServiceInfo *oshandler.ServiceInfo
 //===============================================================
 //
 //===============================================================
-
 
 func initEtcdRootPassword(namespasce string, input etcdResources_HA) bool {
 
