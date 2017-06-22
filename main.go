@@ -255,15 +255,6 @@ func (myBroker *myServiceBroker) Provision(
 		//Customize:   customization,
 	}
 
-	//volumeSize, err = getVolumeSize(details, planInfo)
-	//if err != nil {
-	//	logger.Error("getVolumeSize service "+service_name+" plan "+plan_name, err)
-	//	return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
-	//} else {
-	//	planInfo.Volume_size = volumeSize
-	//	logger.Debug("getVolumeSize: " + strconv.Itoa(volumeSize) + " service " + service_name + " plan " + plan_name)
-	//}
-
 	etcdSaveResult := make(chan error, 1)
 
 	//执行handler中的命令
@@ -673,18 +664,18 @@ func findServicePlanNameInCatalog(service_id, plan_id string) string {
 func findServicePlanInfo(details brokerapi.ProvisionDetails) (volumeSize, connections int, err error) {
 	service_id := details.ServiceID
 	plan_id := details.PlanID
-	vsize, conns, customization, err := 
+	vsize, conns, customization, err :=
 		findServicePlanInfoInBullets(service_id, plan_id)
 	if err != nil {
 		return
 	}
-	
+
 	// default size is the value in etcd bullets.
 	fVolumeSize := float64(vsize)
 
 	// if input parameter also specifies volume size, then use it.
 	if interSize, ok := details.Parameters[G_VolumeSize]; ok {
-		if sSize, ok := interSize.(string); ! ok {
+		if sSize, ok := interSize.(string); !ok {
 			err = errors.New(G_VolumeSize + " is not string.")
 			return
 		} else if fSize, e := strconv.ParseFloat(sSize, 64); e != nil {
@@ -747,46 +738,6 @@ func findServicePlanInfoInBullets(service_id, plan_id string) (volumeSize, conne
 
 	return
 }
-
-/*
-func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
-	if planInfo.Customize == nil {
-		//如果没有Customize, finalVolumeSize默认值 planInfo.Volume_size
-		finalVolumeSize = planInfo.Volume_size
-	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
-		if details.Parameters == nil {
-			finalVolumeSize = int(cus.Default)
-			return
-		}
-		if _, ok := details.Parameters[G_VolumeSize]; !ok {
-			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] not exist")
-			println(err)
-			return
-		}
-		sSize, ok := details.Parameters[G_VolumeSize].(string)
-		if !ok {
-			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] cannot be converted to string")
-			println(err)
-			return
-		}
-		fSize, e := strconv.ParseFloat(sSize, 64)
-		if e != nil {
-			println("getVolumeSize: input parameter volumeSize :", sSize, e)
-			err = e
-			return
-		}
-		if fSize > cus.Max {
-			finalVolumeSize = int(cus.Default)
-		} else {
-			finalVolumeSize = int(cus.Default + cus.Step*math.Ceil((fSize-cus.Default)/cus.Step))
-		}
-	} else {
-		finalVolumeSize = planInfo.Volume_size
-	}
-
-	return
-}
-*/
 
 func getmd5string(s string) string {
 	h := md5.New()

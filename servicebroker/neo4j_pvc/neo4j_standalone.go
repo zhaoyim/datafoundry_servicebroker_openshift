@@ -162,6 +162,14 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	}
 	//<<
 
+	nodePort, err := createNeo4jResources_NodePort(
+		&template,
+		serviceInfo.Database,
+	)
+	if err != nil {
+		return serviceSpec, oshandler.ServiceInfo{}, err
+	}
+
 	// ...
 	go func() {
 		err := <-etcdSaveResult
@@ -208,7 +216,7 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceSpec.DashboardURL = "http://" + net.JoinHostPort(template.routeAdmin.Spec.Host, "80")
 
 	//>>>
-	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, nodePort)
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -343,7 +351,7 @@ func (handler *Neo4j_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 }
 
 // please note: the bsi may be still not fully initialized when calling the function.
-func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, nodePort *neo4jResources_Master) oshandler.Credentials {
 	var master_res neo4jResources_Master
 	err := loadNeo4jResources_Master(myServiceInfo.Url, myServiceInfo.User, myServiceInfo.Password, myServiceInfo.Volumes, &master_res)
 	if err != nil {
@@ -355,13 +363,18 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.C
 		return oshandler.Credentials{}
 	}
 
-	host := fmt.Sprintf("%s.%s.%s", master_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
-	port := strconv.Itoa(http_port.Port)
+	//host := fmt.Sprintf("%s.%s.%s", master_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	//port := strconv.Itoa(http_port.Port)
 	//host := master_res.routeMQ.Spec.Host
 	//port := "80"
+	host := oshandler.RandomNodeAddress()
+	var port string = ""
+	if nodePort != nil && len(nodePort.servicebolt.Spec.Ports) > 0 {
+		port = strconv.Itoa(nodePort.servicebolt.Spec.Ports[0].NodePort)
+	}
 
 	return oshandler.Credentials{
-		Uri:      fmt.Sprintf("http://%s:%s@%s:%s", myServiceInfo.User, myServiceInfo.Password, host, port),
+		Uri:      fmt.Sprintf("bolt://%s:%s@%s:%s", myServiceInfo.User, myServiceInfo.Password, host, port),
 		Hostname: host,
 		Port:     port,
 		Username: myServiceInfo.User,
@@ -501,11 +514,27 @@ func createNeo4jResources_Master(instanceId, serviceBrokerNamespace, neo4jUser, 
 		KPost(prefix+"/replicationcontrollers", &input.rc, &output.rc).
 		OPost(prefix+"/routes", &input.routeAdmin, &output.routeAdmin).
 		//OPost(prefix + "/routes", &input.routeMQ, &output.routeMQ).
-		KPost(prefix+"/services", &input.service, &output.service).
-		KPost(prefix+"/services", &input.servicebolt, &output.servicebolt)
+		KPost(prefix+"/services", &input.service, &output.service)
+		//KPost(prefix+"/services", &input.servicebolt, &output.servicebolt)
 
 	if osr.Err != nil {
 		logger.Error("createNeo4jResources_Master", osr.Err)
+	}
+
+	return &output, osr.Err
+}
+
+func createNeo4jResources_NodePort(input *neo4jResources_Master, serviceBrokerNamespace string) (*neo4jResources_Master, error) {
+	var output neo4jResources_Master
+
+	osr := oshandler.NewOpenshiftREST(oshandler.OC())
+
+	// here, not use job.post
+	prefix := "/namespaces/" + serviceBrokerNamespace
+	osr.KPost(prefix+"/services", &input.servicebolt, &output.servicebolt)
+
+	if osr.Err != nil {
+		logger.Error("createNeo4jResources_NodePort", osr.Err)
 	}
 
 	return &output, osr.Err
