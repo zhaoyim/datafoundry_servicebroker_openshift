@@ -86,7 +86,7 @@ func (handler *Rabbitmq_freeHandler) DoUnbind(myServiceInfo *oshandler.ServiceIn
 //   one peer volume,
 
 func volumeBaseName(instanceId string) string {
-	return "rds-" + instanceId
+	return "rbbtmq-" + instanceId
 }
 
 func peerPvcName0(volumes []oshandler.Volume) string {
