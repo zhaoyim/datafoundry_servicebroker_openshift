@@ -379,6 +379,7 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, nodePort *n
 		Port:     port,
 		Username: myServiceInfo.User,
 		Password: myServiceInfo.Password,
+		Vhost:    master_res.routeAdmin.Spec.Host,
 	}
 }
 

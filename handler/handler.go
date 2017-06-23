@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"github.com/pivotal-cf/brokerapi"
 	"io"
-	"os"
 	mathrand "math/rand"
-	"time"
+	"os"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -52,8 +52,8 @@ type Volume struct {
 //==================
 
 type PlanInfo struct {
-	Volume_size int                     `json:"volume_type"`
-	Connections int                     `json:"connections"`
+	Volume_size int `json:"volume_type"`
+	Connections int `json:"connections"`
 	//Customize   map[string]CustomParams `json:"customize"`
 }
 
@@ -64,6 +64,7 @@ type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+	Vhost    string `json:"vhost"`
 }
 
 type CustomParams struct {
