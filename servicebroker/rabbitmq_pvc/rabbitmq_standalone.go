@@ -10,11 +10,12 @@ import (
 	//"net/http"
 	"bytes"
 	"encoding/json"
-	"github.com/pivotal-cf/brokerapi"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"crypto/sha1"
 	//"encoding/base64"
 	//"text/template"
@@ -331,6 +332,7 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.C
 		Port:     port,
 		Username: myServiceInfo.User,
 		Password: myServiceInfo.Password,
+		Vhost:    host,
 	}
 }
 

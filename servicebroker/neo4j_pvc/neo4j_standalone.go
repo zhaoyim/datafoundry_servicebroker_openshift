@@ -10,11 +10,12 @@ import (
 	//"net/http"
 	"bytes"
 	"encoding/json"
-	"github.com/pivotal-cf/brokerapi"
 	"net"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"crypto/sha1"
 	//"encoding/base64"
 	//"text/template"
@@ -387,7 +388,8 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, nodePort *n
 		Port:     port,
 		Username: myServiceInfo.User,
 		Password: myServiceInfo.Password,
-		Vhost:    master_res.routeAdmin.Spec.Host,
+		//Vhost:    master_res.routeAdmin.Spec.Host,
+		Vhost: fmt.Sprintf("%s.%s.%s", master_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false)),
 	}
 }
 
