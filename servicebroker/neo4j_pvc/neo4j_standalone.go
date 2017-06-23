@@ -62,6 +62,10 @@ func (handler *Neo4j_freeHandler) DoLastOperation(myServiceInfo *oshandler.Servi
 	return newNeo4jHandler().DoLastOperation(myServiceInfo)
 }
 
+func (handler *Neo4j_freeHandler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return newNeo4jHandler().DoUpdate(myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
+}
+
 func (handler *Neo4j_freeHandler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 	return newNeo4jHandler().DoDeprovision(myServiceInfo, asyncAllowed)
 }
@@ -310,6 +314,10 @@ func (handler *Neo4j_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 			Description: "In progress.",
 		}, nil
 	}
+}
+
+func (handler *Neo4j_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return errors.New("not implemented")
 }
 
 func (handler *Neo4j_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {

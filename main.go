@@ -243,7 +243,8 @@ func (myBroker *myServiceBroker) Provision(
 		return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
 	}
 
-	volumeSize, connections, err := findServicePlanInfo(details)
+	volumeSize, connections, err := findServicePlanInfo(
+		details.ServiceID, details.PlanID, details.Parameters, false)
 	if err != nil {
 		logger.Error("findServicePlanInfo service "+service_name+" plan "+plan_name, err)
 		return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
@@ -254,6 +255,15 @@ func (myBroker *myServiceBroker) Provision(
 		Connections: connections,
 		//Customize:   customization,
 	}
+
+	//volumeSize, err = getVolumeSize(details, planInfo)
+	//if err != nil {
+	//	logger.Error("getVolumeSize service "+service_name+" plan "+plan_name, err)
+	//	return brokerapi.ProvisionedServiceSpec{}, errors.New("Internal Error!!")
+	//} else {
+	//	planInfo.Volume_size = volumeSize
+	//	logger.Debug("getVolumeSize: " + strconv.Itoa(volumeSize) + " service " + service_name + " plan " + plan_name)
+	//}
 
 	etcdSaveResult := make(chan error, 1)
 
@@ -306,6 +316,125 @@ func (myBroker *myServiceBroker) Provision(
 	logger.Info("Successful create instance " + instanceID)
 	etcdSaveResult <- nil
 	return provsiondetail, nil
+}
+
+// Update only support volume expanding now.
+func (myBroker *myServiceBroker) Update(
+	instanceID string,
+	details brokerapi.UpdateDetails,
+	asyncAllowed bool,
+) (brokerapi.IsAsync, error) {
+
+	var myServiceInfo handler.ServiceInfo
+
+	//判断实例是否已经存在，如果不存在就报错
+	resp, err := etcdapi.Get(context.Background(), "/servicebroker/"+servcieBrokerName+"/instance/"+instanceID, &client.GetOptions{Recursive: true})
+
+	if err != nil || !resp.Node.Dir {
+		logger.Error("Can not get instance information from etcd", err)
+		return brokerapi.IsAsync(false), brokerapi.ErrInstanceDoesNotExist
+	} else {
+		logger.Debug("Successful get instance information from etcd. NodeInfo is " + resp.Node.Key)
+	}
+
+	var servcie_id, plan_id string
+	//从etcd中取得参数。
+	for i := 0; i < len(resp.Node.Nodes); i++ {
+		if !resp.Node.Nodes[i].Dir {
+			switch strings.ToLower(resp.Node.Nodes[i].Key) {
+			case strings.ToLower(resp.Node.Key) + "/service_id":
+				servcie_id = resp.Node.Nodes[i].Value
+			case strings.ToLower(resp.Node.Key) + "/plan_id":
+				plan_id = resp.Node.Nodes[i].Value
+			}
+		}
+	}
+
+	// todo: maybe
+	// if servcie_id != details.PreviousValues.ServiceID || plan_id != details.PreviousValues.PlanID {
+	// }
+
+	//并且要核对一下detail里面的service_id和plan_id。出错消息现在是500，需要更改一下源代码，以便更改出错代码
+	if servcie_id != details.ServiceID || plan_id != details.PlanID {
+		logger.Info("ServiceID or PlanID not correct!!")
+		return brokerapi.IsAsync(false), errors.New("ServiceID or PlanID not correct!! instanceID " + instanceID)
+	}
+	//是否要判断里面有没有绑定啊？todo
+
+	//判断servcie_id和plan_id是否正确
+	service_name := findServiceNameInCatalog(details.ServiceID)
+	plan_name := findServicePlanNameInCatalog(details.ServiceID, details.PlanID)
+	//todo 应该修改service broker添加一个用户输入出错的返回，而不是500
+	if service_name == "" || plan_name == "" {
+		logger.Info("Service_id or plan_id not correct!!")
+		return false, errors.New("Service_id or plan_id not correct!!")
+	}
+	//是否要检查service和plan的status是否允许创建 todo
+
+	//根据存储在etcd中的service_name和plan_name来确定到底调用那一段处理。注意这个时候不能像Provision一样去catalog里面读取了。
+	//因为这个时候的数据不一定和创建的时候一样，plan等都有可能变化。同样的道理，url，用户名，密码都应该从_info中解码出来
+
+	//隐藏属性不得不单独获取
+	resp, err = etcdget("/servicebroker/" + servcieBrokerName + "/instance/" + instanceID + "/_info")
+	json.Unmarshal([]byte(resp.Node.Value), &myServiceInfo)
+
+	//生成具体的handler对象
+	myHandler, err := handler.New(myServiceInfo.Service_name + "_" + myServiceInfo.Plan_name)
+
+	//没有找到具体的handler，这里如果没有找到具体的handler不是由于用户输入的，是不对的，报500错误
+	if err != nil {
+		logger.Error("Can not found handler for service "+myServiceInfo.Service_name+" plan "+myServiceInfo.Plan_name, err)
+		return brokerapi.IsAsync(false), errors.New("Internal Error!!")
+	}
+
+	if len(myServiceInfo.Volumes) == 0 {
+		reason := "can not get volume info from the old plan."
+		logger.Info(reason)
+		return false, errors.New(reason)
+	}
+
+	volumeSize, connections, err := findServicePlanInfo(
+		details.ServiceID, details.PlanID, details.Parameters, true)
+	if err != nil {
+		logger.Error("findServicePlanInfo service "+service_name+" plan "+plan_name, err)
+		return false, errors.New("Internal Error!!")
+	}
+	_ = connections
+
+	if volumeSize == myServiceInfo.Volumes[0].Volume_size {
+		return false, nil
+	}
+
+	if volumeSize < myServiceInfo.Volumes[0].Volume_size {
+		reason := fmt.Sprintf(
+			"new volume size %d must be larger than old sizes %d",
+			volumeSize, myServiceInfo.Volumes[0].Volume_size,
+		)
+		logger.Info(reason)
+		return false, errors.New(reason)
+	}
+
+	planInfo := handler.PlanInfo{
+		Volume_size: volumeSize,
+	}
+
+	callbackSaveNewInfo := func(serviceInfo *handler.ServiceInfo) error {
+		//存储隐藏信息_info
+		tmpval, _ := json.Marshal(myServiceInfo)
+		_, err := etcdset("/servicebroker/"+servcieBrokerName+"/instance/"+instanceID+"/_info", string(tmpval))
+		return err
+	}
+
+	//执行handler中的命令
+	err = myHandler.DoUpdate(&myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
+
+	//如果出错
+	if err != nil {
+		logger.Error("Error do handler for service "+service_name+" plan "+plan_name, err)
+		return false, errors.New("Internal Error!!")
+	}
+
+	return true, nil
 }
 
 func (myBroker *myServiceBroker) LastOperation(instanceID string) (brokerapi.LastOperation, error) {
@@ -602,11 +731,6 @@ func (myBroker *myServiceBroker) Unbind(instanceID, bindingID string, details br
 	return nil
 }
 
-func (myBroker *myServiceBroker) Update(instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.IsAsync, error) {
-	// Update instance here
-	return brokerapi.IsAsync(false), brokerapi.ErrPlanChangeNotSupported
-}
-
 //定义工具函数
 func etcdget(key string) (*client.Response, error) {
 	n := 5
@@ -661,9 +785,7 @@ func findServicePlanNameInCatalog(service_id, plan_id string) string {
 	}
 	return resp.Node.Value
 }
-func findServicePlanInfo(details brokerapi.ProvisionDetails) (volumeSize, connections int, err error) {
-	service_id := details.ServiceID
-	plan_id := details.PlanID
+func findServicePlanInfo(service_id, plan_id string, parameters map[string]interface{}, errorOnInvalidParameter bool) (volumeSize, connections int, err error) {
 	vsize, conns, customization, err :=
 		findServicePlanInfoInBullets(service_id, plan_id)
 	if err != nil {
@@ -674,7 +796,12 @@ func findServicePlanInfo(details brokerapi.ProvisionDetails) (volumeSize, connec
 	fVolumeSize := float64(vsize)
 
 	// if input parameter also specifies volume size, then use it.
-	if interSize, ok := details.Parameters[G_VolumeSize]; ok {
+	if interSize, ok := parameters[G_VolumeSize]; !ok {
+		if errorOnInvalidParameter {
+			err = errors.New(G_VolumeSize + " parameter is not provided.")
+			return
+		}
+	} else {
 		if sSize, ok := interSize.(string); !ok {
 			err = errors.New(G_VolumeSize + " is not string.")
 			return
@@ -738,6 +865,46 @@ func findServicePlanInfoInBullets(service_id, plan_id string) (volumeSize, conne
 
 	return
 }
+
+/*
+func getVolumeSize(details brokerapi.ProvisionDetails, planInfo oshandler.PlanInfo) (finalVolumeSize int, err error) {
+	if planInfo.Customize == nil {
+		//如果没有Customize, finalVolumeSize默认值 planInfo.Volume_size
+		finalVolumeSize = planInfo.Volume_size
+	} else if cus, ok := planInfo.Customize[G_VolumeSize]; ok {
+		if details.Parameters == nil {
+			finalVolumeSize = int(cus.Default)
+			return
+		}
+		if _, ok := details.Parameters[G_VolumeSize]; !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] not exist")
+			println(err)
+			return
+		}
+		sSize, ok := details.Parameters[G_VolumeSize].(string)
+		if !ok {
+			err = errors.New("getVolumeSize:idetails.Parameters[volumeSize] cannot be converted to string")
+			println(err)
+			return
+		}
+		fSize, e := strconv.ParseFloat(sSize, 64)
+		if e != nil {
+			println("getVolumeSize: input parameter volumeSize :", sSize, e)
+			err = e
+			return
+		}
+		if fSize > cus.Max {
+			finalVolumeSize = int(cus.Default)
+		} else {
+			finalVolumeSize = int(cus.Default + cus.Step*math.Ceil((fSize-cus.Default)/cus.Step))
+		}
+	} else {
+		finalVolumeSize = planInfo.Volume_size
+	}
+
+	return
+}
+*/
 
 func getmd5string(s string) string {
 	h := md5.New()

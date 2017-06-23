@@ -61,6 +61,10 @@ func (handler *Zookeeper_freeHandler) DoLastOperation(myServiceInfo *oshandler.S
 	return newZookeeperHandler().DoLastOperation(myServiceInfo)
 }
 
+func (handler *Zookeeper_freeHandler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return newZookeeperHandler().DoUpdate(myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
+}
+
 func (handler *Zookeeper_freeHandler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 	return newZookeeperHandler().DoDeprovision(myServiceInfo, asyncAllowed)
 }
@@ -305,6 +309,11 @@ func (handler *Zookeeper_Handler) DoLastOperation(myServiceInfo *oshandler.Servi
 		}, nil
 	}
 }
+
+func (handler *Zookeeper_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
+	return errors.New("not implemented")
+}
+
 
 func (handler *Zookeeper_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
 	// ...

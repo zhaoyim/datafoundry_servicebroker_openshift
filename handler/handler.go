@@ -78,6 +78,7 @@ type CustomParams struct {
 
 type HandlerDriver interface {
 	DoProvision(etcdSaveResult chan error, instanceID string, details brokerapi.ProvisionDetails, planInfo PlanInfo, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, ServiceInfo, error)
+	DoUpdate(myServiceInfo *ServiceInfo, planInfo PlanInfo, callbackSaveNewInfo func(*ServiceInfo) error, asyncAllowed bool) error
 	DoLastOperation(myServiceInfo *ServiceInfo) (brokerapi.LastOperation, error)
 	DoDeprovision(myServiceInfo *ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error)
 	DoBind(myServiceInfo *ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, Credentials, error)
@@ -110,6 +111,10 @@ func New(name string) (*Handler, error) {
 
 func (handler *Handler) DoProvision(etcdSaveResult chan error, instanceID string, details brokerapi.ProvisionDetails, planInfo PlanInfo, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, ServiceInfo, error) {
 	return handler.driver.DoProvision(etcdSaveResult, instanceID, details, planInfo, asyncAllowed)
+}
+
+func (handler *Handler) DoUpdate(myServiceInfo *ServiceInfo, planInfo PlanInfo, callbackSaveNewInfo func(*ServiceInfo) error, asyncAllowed bool) error {
+	return handler.driver.DoUpdate(myServiceInfo, planInfo, callbackSaveNewInfo, asyncAllowed)
 }
 
 func (handler *Handler) DoLastOperation(myServiceInfo *ServiceInfo) (brokerapi.LastOperation, error) {
