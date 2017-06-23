@@ -786,12 +786,12 @@ func findServicePlanNameInCatalog(service_id, plan_id string) string {
 	return resp.Node.Value
 }
 func findServicePlanInfo(service_id, plan_id string, parameters map[string]interface{}, errorOnInvalidParameter bool) (volumeSize, connections int, err error) {
-	vsize, conns, customization, err := 
+	vsize, conns, customization, err :=
 		findServicePlanInfoInBullets(service_id, plan_id)
 	if err != nil {
 		return
 	}
-	
+
 	// default size is the value in etcd bullets.
 	fVolumeSize := float64(vsize)
 
