@@ -317,7 +317,33 @@ func (handler *Neo4j_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 }
 
 func (handler *Neo4j_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
-	return errors.New("not implemented")
+	go func() {
+		// Update volume
+		volumeBaseName := volumeBaseName(myServiceInfo.Url)
+		result := oshandler.StartExpandPvcVolumnJob(
+			volumeBaseName,
+			myServiceInfo.Database,
+			myServiceInfo.Volumes,
+			planInfo.Volume_size,
+		)
+
+		err := <-result
+		if err != nil {
+			logger.Error("neo4j expand volume error", err)
+			return
+		}
+
+		println("neo4j expand volumens done")
+
+		for i := range myServiceInfo.Volumes {
+			myServiceInfo.Volumes[i].Volume_size = planInfo.Volume_size
+		}
+		err = callbackSaveNewInfo(myServiceInfo)
+		if err != nil {
+			logger.Error("neo4j expand volume succeeded but save info error", err)
+		}
+	}()
+	return nil
 }
 
 func (handler *Neo4j_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
