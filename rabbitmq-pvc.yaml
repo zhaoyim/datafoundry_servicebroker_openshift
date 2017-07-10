@@ -75,3 +75,17 @@ spec:
     name: cluster
   selector:
     servicebroker: sb-instanceid-rabbitmq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    servicebroker: sb-instanceid-rabbitmq-nodeport
+  name: sb-instanceid-rbbtmq-np
+spec:
+  type: NodePort
+  ports:
+  - port: 5672
+    name: mq
+  selector:
+    servicebroker: sb-instanceid-rabbitmq
