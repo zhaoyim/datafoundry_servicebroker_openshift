@@ -11,10 +11,11 @@ import (
 	//"net"
 	"bytes"
 	"encoding/json"
-	"github.com/pivotal-cf/brokerapi"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"crypto/sha1"
 	//"encoding/base64"
 	//"text/template"
@@ -37,7 +38,7 @@ import (
 //
 //==============================================================
 
-const KafkaServcieBrokerName_Standalone = "Kafka_standalone"
+const KafkaServcieBrokerName_Standalone = "Kafka2_standalone"
 
 func init() {
 	oshandler.Register(KafkaServcieBrokerName_Standalone, &Kafka_freeHandler{})
@@ -450,7 +451,7 @@ func loadKafkaResources_Master(instanceID, serviceBrokerNamespace /*, kafkaUser,
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
-		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
+		[]byte(serviceBrokerNamespace+oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
