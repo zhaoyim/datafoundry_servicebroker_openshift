@@ -198,4 +198,4 @@ spec:
     - name: client
       port: 2181
   selector:
-    servicebroker: sb-instanceid-zk
+    app: sb-instanceid-zk

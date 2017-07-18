@@ -121,7 +121,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sb-instanceid-kafka-np
+  name: sb-instanceid-kfk-np
 spec:
   type: NodePort
   ports:

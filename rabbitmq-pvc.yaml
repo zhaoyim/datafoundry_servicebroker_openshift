@@ -81,7 +81,7 @@ kind: Service
 metadata:
   labels:
     servicebroker: sb-instanceid-rabbitmq-nodeport
-  name: sb-instanceid-rbbtmq-np
+  name: sb-instanceid-rbmq-np
 spec:
   type: NodePort
   ports:
