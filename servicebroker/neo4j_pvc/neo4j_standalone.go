@@ -193,6 +193,7 @@ func (handler *Neo4j_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		err = <-result
 		if err != nil {
 			logger.Error("neo4j create volume", err)
+			go func() { kdel(serviceBrokerNamespace, "services", nodePort.servicebolt.Name) }()
 			return
 		}
 
