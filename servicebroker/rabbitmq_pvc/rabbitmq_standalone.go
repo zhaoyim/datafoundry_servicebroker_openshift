@@ -161,6 +161,14 @@ func (handler *Rabbitmq_Handler) DoProvision(etcdSaveResult chan error, instance
 	}
 	//<<
 
+	nodePort, err := createRabbitmqResources_NodePort(
+		&template,
+		serviceInfo.Database,
+	)
+	if err != nil {
+		return serviceSpec, oshandler.ServiceInfo{}, err
+	}
+
 	// ...
 	go func() {
 		err := <-etcdSaveResult
@@ -208,7 +216,7 @@ func (handler *Rabbitmq_Handler) DoProvision(etcdSaveResult chan error, instance
 	serviceSpec.DashboardURL = "http://" + net.JoinHostPort(template.routeAdmin.Spec.Host, "80")
 
 	//>>>
-	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, nodePort)
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -309,7 +317,7 @@ func (handler *Rabbitmq_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceI
 }
 
 // please note: the bsi may be still not fully initialized when calling the function.
-func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, nodePort *rabbitmqResources_Master) oshandler.Credentials {
 	var master_res rabbitmqResources_Master
 	err := loadRabbitmqResources_Master(myServiceInfo.Url, myServiceInfo.User, myServiceInfo.Password, myServiceInfo.Volumes, &master_res)
 	if err != nil {
@@ -321,18 +329,24 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.C
 		return oshandler.Credentials{}
 	}
 
-	host := fmt.Sprintf("%s.%s.%s", master_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
-	port := strconv.Itoa(mq_port.Port)
+	svchost := fmt.Sprintf("%s.%s.%s", master_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	svcport := strconv.Itoa(mq_port.Port)
 	//host := master_res.routeMQ.Spec.Host
 	//port := "80"
 
+	ndhost := oshandler.RandomNodeAddress()
+	var ndport string = ""
+	if nodePort != nil && len(nodePort.serviceNodePort.Spec.Ports) > 0 {
+		ndport = strconv.Itoa(nodePort.serviceNodePort.Spec.Ports[0].NodePort)
+	}
+
 	return oshandler.Credentials{
-		Uri:      fmt.Sprintf("amqp://%s:%s@%s:%s", myServiceInfo.User, myServiceInfo.Password, host, port),
-		Hostname: host,
-		Port:     port,
+		Uri:      fmt.Sprintf("amqp://%s:%s@%s:%s", myServiceInfo.User, myServiceInfo.Password, svchost, svcport),
+		Hostname: ndhost,
+		Port:     ndport,
 		Username: myServiceInfo.User,
 		Password: myServiceInfo.Password,
-		Vhost:    host,
+		Vhost:    svchost,
 	}
 }
 
@@ -435,7 +449,8 @@ func loadRabbitmqResources_Master(instanceID, rabbitmqUser, rabbitmqPassword str
 		Decode(&res.rc).
 		Decode(&res.routeAdmin).
 		//Decode(&res.routeMQ).
-		Decode(&res.service)
+		Decode(&res.service).
+		Decode(&res.serviceNodePort)
 
 	return decoder.Err
 }
@@ -444,7 +459,8 @@ type rabbitmqResources_Master struct {
 	rc         kapi.ReplicationController
 	routeAdmin routeapi.Route
 	//routeMQ    routeapi.Route
-	service kapi.Service
+	service         kapi.Service
+	serviceNodePort kapi.Service
 }
 
 func createRabbitmqResources_Master(instanceId, serviceBrokerNamespace, rabbitmqUser, rabbitmqPassword string, volumes []oshandler.Volume) (*rabbitmqResources_Master, error) {
@@ -473,6 +489,22 @@ func createRabbitmqResources_Master(instanceId, serviceBrokerNamespace, rabbitmq
 	return &output, osr.Err
 }
 
+func createRabbitmqResources_NodePort(input *rabbitmqResources_Master, serviceBrokerNamespace string) (*rabbitmqResources_Master, error) {
+	var output rabbitmqResources_Master
+
+	osr := oshandler.NewOpenshiftREST(oshandler.OC())
+
+	// here, not use job.post
+	prefix := "/namespaces/" + serviceBrokerNamespace
+	osr.KPost(prefix+"/services", &input.serviceNodePort, &output.serviceNodePort)
+
+	if osr.Err != nil {
+		logger.Error("createRabbitmqResources_NodePort", osr.Err)
+	}
+
+	return &output, osr.Err
+}
+
 func getRabbitmqResources_Master(instanceId, serviceBrokerNamespace, rabbitmqUser, rabbitmqPassword string, volumes []oshandler.Volume) (*rabbitmqResources_Master, error) {
 	var output rabbitmqResources_Master
 
@@ -489,7 +521,8 @@ func getRabbitmqResources_Master(instanceId, serviceBrokerNamespace, rabbitmqUse
 		KGet(prefix+"/replicationcontrollers/"+input.rc.Name, &output.rc).
 		OGet(prefix+"/routes/"+input.routeAdmin.Name, &output.routeAdmin).
 		//OGet(prefix + "/routes/" + input.routeMQ.Name, &output.routeMQ).
-		KGet(prefix+"/services/"+input.service.Name, &output.service)
+		KGet(prefix+"/services/"+input.service.Name, &output.service).
+		KGet(prefix+"/services/"+input.serviceNodePort.Name, &output.serviceNodePort)
 
 	if osr.Err != nil {
 		logger.Error("getRabbitmqResources_Master", osr.Err)
@@ -505,6 +538,7 @@ func destroyRabbitmqResources_Master(masterRes *rabbitmqResources_Master, servic
 	go func() { odel(serviceBrokerNamespace, "routes", masterRes.routeAdmin.Name) }()
 	//go func() {odel (serviceBrokerNamespace, "routes", masterRes.routeMQ.Name)}()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.service.Name) }()
+	go func() { kdel(serviceBrokerNamespace, "services", masterRes.serviceNodePort.Name) }()
 }
 
 //===============================================================
