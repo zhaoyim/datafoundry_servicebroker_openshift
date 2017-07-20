@@ -145,44 +145,47 @@ func (handler *Kafka_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 	serviceInfo.Volumes = volumes
 
-	//>> may be not optimized
-	var zk_template ZookeeperResources_Master
-	err := loadZookeeperResources_Master(
-		serviceInfo.Url,
-		serviceInfo.Volumes,
-		&zk_template)
-	if err != nil {
-		return serviceSpec, oshandler.ServiceInfo{}, err
-	}
-	//<<
+	/*
+		//>> may be not optimized
+		var zk_template ZookeeperResources_Master
+		err := loadZookeeperResources_Master(
+			serviceInfo.Url,
+			serviceInfo.Volumes,
+			&zk_template)
+		if err != nil {
+			return serviceSpec, oshandler.ServiceInfo{}, err
+		}
+		//<<
 
-	zk_NodePort, err := createZookeeperResources_NodePort(
-		&zk_template,
-		serviceInfo.Database,
-	)
-	if err != nil {
-		return serviceSpec, oshandler.ServiceInfo{}, err
-	}
+			zk_NodePort, err := createZookeeperResources_NodePort(
+				&zk_template,
+				serviceInfo.Database,
+			)
+			if err != nil {
+				return serviceSpec, oshandler.ServiceInfo{}, err
+			}
+	*/
 
-	//>> may be not optimized
-	var kfk_template kafkaResources_Master
-	err = loadKafkaResources_Master(
-		serviceInfo.Url,
-		serviceInfo.Database,
-		&kfk_template,
-		serviceInfo.Volumes)
-	if err != nil {
-		return serviceSpec, oshandler.ServiceInfo{}, err
-	}
-	//<<
-
-	kfk_NodePort, err := createKafkaResources_NodePort(
-		&kfk_template,
-		serviceInfo.Database,
-	)
-	if err != nil {
-		return serviceSpec, oshandler.ServiceInfo{}, err
-	}
+	/*
+		//>> may be not optimized
+		var kfk_template kafkaResources_Master
+		err = loadKafkaResources_Master(
+			serviceInfo.Url,
+			serviceInfo.Database,
+			&kfk_template,
+			serviceInfo.Volumes)
+		if err != nil {
+			return serviceSpec, oshandler.ServiceInfo{}, err
+		}
+		//<<
+			kfk_NodePort, err := createKafkaResources_NodePort(
+				&kfk_template,
+				serviceInfo.Database,
+			)
+			if err != nil {
+				return serviceSpec, oshandler.ServiceInfo{}, err
+			}
+	*/
 
 	go func() {
 		err := <-etcdSaveResult
@@ -237,7 +240,8 @@ func (handler *Kafka_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceSpec.DashboardURL = ""
 
 	//>>>
-	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, zk_NodePort, kfk_NodePort)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo) //zk_NodePort, kfk_NodePort
+
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -359,7 +363,10 @@ func (handler *Kafka_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 }
 
 // please note: the bsi may be still not fully initialized when calling the function.
-func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, zk_NodePort *ZookeeperResources_Master, kfk_NodePort *kafkaResources_Master) oshandler.Credentials {
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo,
+
+//zk_NodePort *ZookeeperResources_Master, kfk_NodePort *kafkaResources_Master
+) oshandler.Credentials {
 	var zookeeper_res ZookeeperResources_Master
 	err := loadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Volumes, &zookeeper_res)
 	if err != nil {
@@ -372,12 +379,14 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, zk_NodePort
 		return oshandler.Credentials{}
 	}
 
-	zk_ndhost := oshandler.RandomNodeAddress()
-	var zk_ndport string = ""
-	zk_np := oshandler.GetServicePortByName(&zk_NodePort.serviceNodePort, "client")
-	if zk_np == nil {
-		zk_ndport = strconv.Itoa(zk_np.Port)
-	}
+	/*
+		zk_ndhost := oshandler.RandomNodeAddress()
+		var zk_ndport string = ""
+		zk_np := oshandler.GetServicePortByName(&zk_NodePort.serviceNodePort, "client")
+		if zk_np == nil {
+			zk_ndport = strconv.Itoa(zk_np.Port)
+		}
+	*/
 
 	var kafka_res kafkaResources_Master
 	err = loadKafkaResources_Master(myServiceInfo.Url, myServiceInfo.Database, &kafka_res, myServiceInfo.Volumes)
@@ -392,18 +401,28 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, zk_NodePort
 	kfk_host := fmt.Sprintf("%s.%s.%s", kafka_res.svc3.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	kfk_port := strconv.Itoa(kafka_port.Port)
 
-	kfk_ndhost := oshandler.RandomNodeAddress()
-	var kfk_ndport string = ""
-	kfk_np := oshandler.GetServicePortByName(&kfk_NodePort.serviceNodePort, "client")
-	if kfk_np == nil {
-		kfk_ndport = strconv.Itoa(kfk_np.Port)
-	}
+	/*
+		kfk_ndhost := oshandler.RandomNodeAddress()
+		var kfk_ndport string = ""
+		kfk_np := oshandler.GetServicePortByName(&kfk_NodePort.serviceNodePort, "client")
+		if kfk_np == nil {
+			kfk_ndport = strconv.Itoa(kfk_np.Port)
+		}
+	*/
 
+	/*
+		return oshandler.Credentials{
+			Uri: fmt.Sprintf("external zookeeper: %s:%s, internal kafka: %s:%s, internal zookeeper: %s:%s",
+				zk_ndhost, zk_ndport, kfk_host, kfk_port, zk_host, zk_port),
+			Hostname: kfk_ndhost,
+			Port:     kfk_ndport,
+		}
+	*/
 	return oshandler.Credentials{
-		Uri: fmt.Sprintf("external zookeeper: %s:%s, internal kafka: %s:%s, internal zookeeper: %s:%s",
-			zk_ndhost, zk_ndport, kfk_host, kfk_port, zk_host, zk_port),
-		Hostname: kfk_ndhost,
-		Port:     kfk_ndport,
+		Uri: fmt.Sprintf("kafka: %s:%s, zookeeper: %s:%s",
+			kfk_host, kfk_port, zk_host, zk_port),
+		Hostname: kfk_host,
+		Port:     kfk_port,
 	}
 }
 
@@ -616,8 +635,8 @@ func loadKafkaResources_Master(instanceID, serviceBrokerNamespace /*, kafkaUser,
 		Decode(&res.dc2).
 		Decode(&res.svc1).
 		Decode(&res.svc2).
-		Decode(&res.svc3).
-		Decode(&res.serviceNodePort)
+		Decode(&res.svc3) //.
+		//Decode(&res.serviceNodePort)
 
 	return decoder.Err
 }
@@ -630,7 +649,7 @@ type kafkaResources_Master struct {
 	svc2 kapi.Service
 	svc3 kapi.Service
 
-	serviceNodePort kapi.Service
+	//serviceNodePort kapi.Service
 }
 
 func (job *kafkaOrchestrationJob) createKafkaResources_Master(instanceId, serviceBrokerNamespace string, volumes []oshandler.Volume) error {
@@ -670,6 +689,7 @@ func (job *kafkaOrchestrationJob) createKafkaResources_Master(instanceId, servic
 	return nil
 }
 
+/*
 func createKafkaResources_NodePort(input *kafkaResources_Master, serviceBrokerNamespace string) (*kafkaResources_Master, error) {
 	var output kafkaResources_Master
 
@@ -685,6 +705,7 @@ func createKafkaResources_NodePort(input *kafkaResources_Master, serviceBrokerNa
 
 	return &output, osr.Err
 }
+*/
 
 func getKafkaResources_Master(instanceId, serviceBrokerNamespace string, volumes []oshandler.Volume) (*kafkaResources_Master, error) {
 	var output kafkaResources_Master
@@ -703,8 +724,8 @@ func getKafkaResources_Master(instanceId, serviceBrokerNamespace string, volumes
 		OGet(prefix+"/deploymentconfigs/"+input.dc2.Name, &output.dc2).
 		KGet(prefix+"/services/"+input.svc1.Name, &output.svc1).
 		KGet(prefix+"/services/"+input.svc2.Name, &output.svc2).
-		KGet(prefix+"/services/"+input.svc3.Name, &output.svc3).
-		KGet(prefix+"/services/"+input.serviceNodePort.Name, &output.serviceNodePort)
+		KGet(prefix+"/services/"+input.svc3.Name, &output.svc3) //.
+		//KGet(prefix+"/services/"+input.serviceNodePort.Name, &output.serviceNodePort)
 
 	if osr.Err != nil {
 		logger.Error("getKafkaResources_Master", osr.Err)
@@ -721,7 +742,7 @@ func destroyKafkaResources_Master(masterRes *kafkaResources_Master, serviceBroke
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc1.Name) }()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc2.Name) }()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc3.Name) }()
-	go func() { kdel(serviceBrokerNamespace, "services", masterRes.serviceNodePort.Name) }()
+	//go func() { kdel(serviceBrokerNamespace, "services", masterRes.serviceNodePort.Name) }()
 
 	fmt.Println("kafka dc1 lables:", masterRes.dc1.Labels)
 	rcs, _ := statRunningRCByLabels(serviceBrokerNamespace, masterRes.dc1.Labels)

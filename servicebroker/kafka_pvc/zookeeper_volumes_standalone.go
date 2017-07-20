@@ -214,8 +214,8 @@ func loadZookeeperResources_Master(instanceID string, volumes []oshandler.Volume
 		Decode(&res.svc1).
 		Decode(&res.svc2).
 		Decode(&res.svc3).
-		Decode(&res.svc4).
-		Decode(&res.serviceNodePort)
+		Decode(&res.svc4) //.
+		//Decode(&res.serviceNodePort)
 
 	return decoder.Err
 }
@@ -230,7 +230,7 @@ type ZookeeperResources_Master struct {
 	svc3 kapi.Service
 	svc4 kapi.Service
 
-	serviceNodePort kapi.Service
+	//serviceNodePort kapi.Service
 }
 
 func (masterRes *ZookeeperResources_Master) ServiceHostPort(serviceBrokerNamespace string) (string, string, error) {
@@ -275,6 +275,7 @@ func createZookeeperResources_Master(instanceId, serviceBrokerNamespace string, 
 	return &output, osr.Err
 }
 
+/*
 func createZookeeperResources_NodePort(input *ZookeeperResources_Master, serviceBrokerNamespace string) (*ZookeeperResources_Master, error) {
 	var output ZookeeperResources_Master
 
@@ -290,6 +291,7 @@ func createZookeeperResources_NodePort(input *ZookeeperResources_Master, service
 
 	return &output, osr.Err
 }
+*/
 
 func GetZookeeperResources_Master(instanceId, serviceBrokerNamespace string, volumes []oshandler.Volume) (*ZookeeperResources_Master, error) {
 	var output ZookeeperResources_Master
@@ -315,8 +317,8 @@ func getZookeeperResources_Master(serviceBrokerNamespace string, input, output *
 		KGet(prefix+"/services/"+input.svc1.Name, &output.svc1).
 		KGet(prefix+"/services/"+input.svc2.Name, &output.svc2).
 		KGet(prefix+"/services/"+input.svc3.Name, &output.svc3).
-		KGet(prefix+"/services/"+input.svc4.Name, &output.svc4).
-		KGet(prefix+"/services/"+input.serviceNodePort.Name, &output.serviceNodePort)
+		KGet(prefix+"/services/"+input.svc4.Name, &output.svc4) //.
+		//KGet(prefix+"/services/"+input.serviceNodePort.Name, &output.serviceNodePort)
 
 	if osr.Err != nil {
 		logger.Error("getZookeeperResources_Master", osr.Err)
@@ -335,7 +337,7 @@ func destroyZookeeperResources_Master(masterRes *ZookeeperResources_Master, serv
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc2.Name) }()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc3.Name) }()
 	go func() { kdel(serviceBrokerNamespace, "services", masterRes.svc4.Name) }()
-	go func() { kdel(serviceBrokerNamespace, "services", masterRes.serviceNodePort.Name) }()
+	//go func() { kdel(serviceBrokerNamespace, "services", masterRes.serviceNodePort.Name) }()
 
 	fmt.Println("zookeeper dc1 lables:", masterRes.dc1.Labels)
 	rcs, _ := statRunningRCByLabels(serviceBrokerNamespace, masterRes.dc1.Labels)
