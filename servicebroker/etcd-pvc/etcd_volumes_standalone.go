@@ -168,8 +168,9 @@ func (handler *Etcd_sampleHandler) DoProvision(etcdSaveResult chan error, instan
 			println("etcd createEtcdResources_HA error: ", err)
 			logger.Error("etcd createEtcdResources_HA error", err)
 
-			destroyEtcdResources_HA(output, serviceBrokerNamespace)
-			oshandler.DeleteVolumns(serviceInfo.Database, volumes)
+			//destroyEtcdResources_HA(output, serviceBrokerNamespace)
+			//oshandler.DeleteVolumns(serviceInfo.Database, volumes)
+			_ = output
 
 			return
 		}
@@ -377,6 +378,7 @@ func (handler *Etcd_sampleHandler) DoUnbind(myServiceInfo *oshandler.ServiceInfo
 //
 //===============================================================
 
+// The function name is for history reason?
 func initEtcdRootPassword(namespasce string, input etcdResources_HA) bool {
 
 	ok := func(dc *dcapi.DeploymentConfig) bool {
@@ -394,7 +396,9 @@ func initEtcdRootPassword(namespasce string, input etcdResources_HA) bool {
 	}
 
 	var output etcdResources_HA
-	for {
+	var i = 0
+	const MaxTries = 9
+	for i < MaxTries {
 		time.Sleep(7 * time.Second)
 		if ok(&input.etcddc1) && ok(&input.etcddc2) && ok(&input.etcddc3) {
 			err := kpost(namespasce, "pods", &input.pod, &output.pod)
@@ -404,6 +408,11 @@ func initEtcdRootPassword(namespasce string, input etcdResources_HA) bool {
 			}
 			break
 		}
+		i++
+	}
+	if i == MaxTries {
+		fmt.Println("cteate init password pod err: max tries reached")
+		return false
 	}
 	return true
 }
