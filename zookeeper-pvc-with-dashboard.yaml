@@ -161,20 +161,7 @@ spec:
         service-broker: sb-instanceid-zk
         sb-instanceid-zk: "3"
     spec:
-      volumes:---
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    servicebroker: sb-instanceid-rabbitmq-nodeport
-  name: sb-instanceid-rbbtmq-np
-spec:
-  type: NodePort
-  ports:
-  - port: 5672
-    name: mq
-  selector:
-    servicebroker: sb-instanceid-rabbitmq
+      volumes:
         - name: data
           persistentVolumeClaim:
             claimName: "pvcname*****peer3"
