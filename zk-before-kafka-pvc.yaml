@@ -184,7 +184,7 @@ spec:
     port: 2888
   - name: 3888-tcp
     port: 3888
-  selector:mapping values are not allowed in this context
+  selector:
     app: sb-instanceid-zk
 
 #---
