@@ -193,7 +193,7 @@ spec:
 ---
 apiVersion: v1
 kind: Route
-metadata:
+metadata:mapping values are not allowed in this context
   name: sb-instanceid-zk
   labels:
     servicebroker: sb-instanceid-zookeeper
