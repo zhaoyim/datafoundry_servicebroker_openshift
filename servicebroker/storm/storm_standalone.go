@@ -11,10 +11,11 @@ import (
 	//"net"
 	"bytes"
 	"encoding/json"
-	"github.com/pivotal-cf/brokerapi"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"crypto/sha1"
 	//"encoding/base64"
 	//"text/template"
@@ -31,6 +32,7 @@ import (
 
 	oshandler "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/handler"
 	"github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper"
+	//"github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper"
 )
 
 //==============================================================
@@ -109,6 +111,11 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	zookeeperUser := "super" // oshandler.NewElevenLengthID()
 	zookeeperPassword := oshandler.GenGUID()
 
+	println()
+	println("instanceIdInTempalte = ", instanceIdInTempalte)
+	println("serviceBrokerNamespace = ", serviceBrokerNamespace)
+	println()
+
 	serviceInfo.Url = instanceIdInTempalte
 	serviceInfo.Database = serviceBrokerNamespace // may be not needed
 	//serviceInfo.User = stormUser
@@ -116,10 +123,21 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceInfo.Admin_user = zookeeperUser
 	serviceInfo.Admin_password = zookeeperPassword
 
-	println()
-	println("instanceIdInTempalte = ", instanceIdInTempalte)
-	println("serviceBrokerNamespace = ", serviceBrokerNamespace)
-	println()
+	//>> may be not optimized
+	var template stormResources_Nimbus
+	err := loadStormResources_Nimbus(serviceInfo.Url, serviceInfo.Database /*, stormUser, stormPassword*/, &template)
+	if err != nil {
+		return serviceSpec, oshandler.ServiceInfo{}, err
+	}
+	//<<
+
+	nodePort, err := createStormResources_NodePort(
+		&template,
+		serviceInfo.Database,
+	)
+	if err != nil {
+		return serviceSpec, oshandler.ServiceInfo{}, err
+	}
 
 	go func() {
 		err := <-etcdSaveResult
@@ -134,9 +152,9 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		//	return serviceSpec, serviceInfo, err
 		//}
 		// nimbus zookeeper
-		output, err := zookeeper.CreateZookeeperResources_Master(instanceIdInTempalte, serviceBrokerNamespace, zookeeperUser, zookeeperPassword)
+		output, err := CreateZookeeperResources_Master(instanceIdInTempalte, serviceBrokerNamespace, zookeeperUser, zookeeperPassword)
 		if err != nil {
-			zookeeper.DestroyZookeeperResources_Master(output, serviceBrokerNamespace)
+			DestroyZookeeperResources_Master(output, serviceBrokerNamespace)
 
 			return
 		}
@@ -155,7 +173,7 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceSpec.DashboardURL = ""
 
 	//>>>
-	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, false)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo, nodePort)
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -179,7 +197,7 @@ func (handler *Storm_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 	uisuperviser_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
 
 	nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
-	if nodeport == nil || nodeport.NodePort < 0  {
+	if nodeport == nil || nodeport.NodePort < 0 {
 		return brokerapi.LastOperation{
 			State:       brokerapi.InProgress,
 			Description: "In progress ..",
@@ -238,8 +256,8 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 
 		println("to destroy zookeeper resources")
 
-		zookeeper_res, _ := zookeeper.GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password)
-		zookeeper.DestroyZookeeperResources_Master(zookeeper_res, myServiceInfo.Database)
+		zookeeper_res, _ := GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password)
+		DestroyZookeeperResources_Master(zookeeper_res, myServiceInfo.Database)
 
 		// ...
 
@@ -256,9 +274,9 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 }
 
 // please note: the bsi may be still not fully initialized when calling the function.
-func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, needNodePort bool) oshandler.Credentials {
-	var zookeeper_res zookeeper.ZookeeperResources_Master
-	err := zookeeper.LoadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, &zookeeper_res)
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, nodePortNimbus *stormResources_Nimbus) oshandler.Credentials {
+	var zookeeper_res ZookeeperResources_Master
+	err := LoadZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, &zookeeper_res)
 	if err != nil {
 		return oshandler.Credentials{}
 	}
@@ -288,13 +306,10 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, needNodePor
 		return oshandler.Credentials{}
 	}
 
-	var nodeportAddr string
-	if needNodePort {
-		nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
-		if nodeport == nil || nodeport.NodePort < 0  {
-			return oshandler.Credentials{}
-		}
-		nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
+	ndhost := oshandler.RandomNodeAddress()
+	var ndport string = ""
+	if nodePortNimbus != nil {
+		ndport = strconv.Itoa(nodePortNimbus.nodeport.Spec.Ports[0].NodePort)
 	}
 
 	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
@@ -303,9 +318,9 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, needNodePor
 	//port := "80"
 
 	return oshandler.Credentials{
-		Uri:      fmt.Sprintf("%sstorm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", nodeportAddr, host, port, ui_host, ui_port, zk_host, zk_port),
-		Hostname: host,
-		Port:     port,
+		Uri:      fmt.Sprintf("storm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", host, port, ui_host, ui_port, zk_host, zk_port),
+		Hostname: ndhost,
+		Port:     ndport,
 		//Username: myServiceInfo.User,
 		//Password: myServiceInfo.Password,
 		// todo: need return zookeeper password?
@@ -314,7 +329,6 @@ func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo, needNodePor
 
 func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
 	// todo: handle errors
-
 	zookeeper_res, err := zookeeper.GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password)
 	if err != nil {
 		return brokerapi.Binding{}, oshandler.Credentials{}, err
@@ -343,21 +357,13 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 		return brokerapi.Binding{}, oshandler.Credentials{}, errors.New("storm-nimbus-port port not found")
 	}
 
-	var nodeportAddr string
-	nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
-	if nodeport != nil || nodeport.NodePort < 0  {
-		nodeportAddr = "external-address: not available, "
-	} else {
-		nodeportAddr = fmt.Sprintf("external-address: %s:%d, ", oshandler.RandomNodeAddress(), nodeport.NodePort)
-	}
-
 	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
 	port := strconv.Itoa(storm_nimbus_port.Port)
 	//host := nimbus_res.routeMQ.Spec.Host
 	//port := "80"
 
 	mycredentials := oshandler.Credentials{
-		Uri:      fmt.Sprintf("%sstorm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", nodeportAddr, host, port, ui_host, ui_port, zk_host, zk_port),
+		Uri:      fmt.Sprintf("storm-nimbus: %s:%s storm-UI: %s:%s zookeeper: %s:%s", host, port, ui_host, ui_port, zk_host, zk_port),
 		Hostname: host,
 		Port:     port,
 		//Username: myServiceInfo.User,
@@ -417,7 +423,7 @@ type stormOrchestrationJob struct {
 
 	serviceInfo *oshandler.ServiceInfo
 
-	zookeeperResources *zookeeper.ZookeeperResources_Master
+	zookeeperResources *ZookeeperResources_Master
 	nimbusResources    *stormResources_Nimbus
 }
 
@@ -434,10 +440,10 @@ func (job *stormOrchestrationJob) cancel() {
 func (job *stormOrchestrationJob) run() {
 	println("-- stormOrchestrationJob start --")
 
-	result, cancel, err := zookeeper.WatchZookeeperOrchestration(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password)
+	result, cancel, err := WatchZookeeperOrchestration(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password)
 	if err != nil {
-		zookeeper_res, _ := zookeeper.GetZookeeperResources_Master(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password)
-		zookeeper.DestroyZookeeperResources_Master(zookeeper_res, job.serviceInfo.Database)
+		zookeeper_res, _ := GetZookeeperResources_Master(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password)
+		DestroyZookeeperResources_Master(zookeeper_res, job.serviceInfo.Database)
 		return
 	}
 
@@ -454,7 +460,7 @@ func (job *stormOrchestrationJob) run() {
 	println("-- stormOrchestrationJob done, succeeded:", succeeded)
 
 	if !succeeded {
-		zookeeper.DestroyZookeeperResources_Master(job.zookeeperResources, job.serviceInfo.Database)
+		DestroyZookeeperResources_Master(job.zookeeperResources, job.serviceInfo.Database)
 		return
 	}
 
@@ -555,7 +561,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
-		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
+		[]byte(serviceBrokerNamespace+oshandler.ServiceDomainSuffix(true)), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("dnsmasq*****"), []byte(oshandler.DnsmasqServer()), -1)
 
 	// oshandler.RandomNodeAddress()
@@ -611,7 +617,7 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
-		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
+		[]byte(serviceBrokerNamespace+oshandler.ServiceDomainSuffix(true)), -1)
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -668,10 +674,10 @@ func (job *stormOrchestrationJob) createStormResources_Nimbus(instanceId, servic
 	if err != nil {
 		return &output, err
 	}
-	err = job.kpost(serviceBrokerNamespace, "services", &input.nodeport, &output.nodeport)
-	if err != nil {
-		return &output, err
-	}
+	//err = job.kpost(serviceBrokerNamespace, "services", &input.nodeport, &output.nodeport)
+	//if err != nil {
+	//	return &output, err
+	//}
 	err = job.kpost(serviceBrokerNamespace, "replicationcontrollers", &input.rc, &output.rc)
 	if err != nil {
 		return &output, err
@@ -691,6 +697,22 @@ func (job *stormOrchestrationJob) createStormResources_Nimbus(instanceId, servic
 
 		return nil
 	*/
+}
+
+func createStormResources_NodePort(input *stormResources_Nimbus, serviceBrokerNamespace string) (*stormResources_Nimbus, error) {
+	var output stormResources_Nimbus
+
+	osr := oshandler.NewOpenshiftREST(oshandler.OC())
+
+	// here, not use job.post
+	prefix := "/namespaces/" + serviceBrokerNamespace
+	osr.KPost(prefix+"/services", &input.nodeport, &output.nodeport)
+
+	if osr.Err != nil {
+		logger.Error("createStormResources_NodePort", osr.Err)
+	}
+
+	return &output, osr.Err
 }
 
 func getStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) (*stormResources_Nimbus, error) {
