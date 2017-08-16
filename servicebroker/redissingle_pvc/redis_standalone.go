@@ -422,7 +422,7 @@ func loadRedisSingleResources_Master(instanceID, redisPassword string, volumes [
 		if err != nil {
 			return err
 		}
-		redis_image := oshandler.RedisImage()
+		redis_image := oshandler.Redis32Image()
 		redis_image = strings.TrimSpace(redis_image)
 		if len(redis_image) > 0 {
 			RedisSingleTemplateData_Master = bytes.Replace(
