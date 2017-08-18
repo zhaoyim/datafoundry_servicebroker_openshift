@@ -1,9 +1,16 @@
+
+# https://redis.io/topics/cluster-tutorial
+# * at least 3 masters are recommend, otherwise may not work as expected.
+# * Currently Redis Cluster does not support NAT, what does this mean? so NodePort ...?
+# so still use a non-cluster master now.
+# 
+# rdss: redis single
+
 apiVersion: v1
 kind: Service
 metadata:
   labels:
     servicebroker: sb-instanceid-redis-single
-  # rdss: redis single
   name: sb-instanceid-rdss
 spec:
   ports:
@@ -18,7 +25,6 @@ kind: Service
 metadata:
   labels:
     servicebroker: sb-instanceid-redis-single-nodeport
-  # rdss: redis single
   name: sb-instanceid-rdss-np
 spec:
   type: NodePort
@@ -29,15 +35,9 @@ spec:
     sb-instanceid-redis-single: master
 ---
 
-# https://redis.io/topics/cluster-tutorial
-# * at least 3 masters are recommend, otherwise may not work as expected.
-# * Currently Redis Cluster does not support NAT, what does this mean? so NodePort ...?
-# so still use a non-cluster master now.
-
 apiVersion: v1
 kind: ReplicationController
 metadata:
-  # rdss: redis single
   name: sb-instanceid-rdss
 spec:
   replicas: 1
@@ -48,7 +48,6 @@ spec:
       labels:
         sb-instanceid-redis-single: master
         servicebroker: sb-instanceid-redis-single
-      # rdss: redis single
       name: sb-instanceid-rdss
     spec:
       containers:

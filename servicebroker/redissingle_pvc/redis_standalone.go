@@ -450,7 +450,8 @@ func loadRedisSingleResources_Master(instanceID, redisPassword string, volumes [
 
 	decoder := oshandler.NewYamlDecoder(yamlTemplates)
 	decoder.
-		//Decode(&res.pod)
+		Decode(&res.service).
+		Decode(&res.serviceNodePort).
 		Decode(&res.rc)
 
 	return decoder.Err

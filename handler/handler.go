@@ -325,10 +325,9 @@ func init() {
 	svcDomainSuffixWithDot = "." + svcDomainSuffix
 
 	nodeAddresses = strings.Split(getenv("NODE_ADDRESSES"), ",")
-
 	dnsmasqServer = getenv("DNSMASQ_SERVER")
-
 	endpointSuffix = getenv("ENDPOINTSUFFIX")
+
 	etcdImage = getenv("ETCDIMAGE")
 	etcdbootImage = getenv("ETCDBOOTIMAGE")
 	zookeeperImage = getenv("ZOOKEEPERIMAGE")
