@@ -1,7 +1,7 @@
-package storm_pvc
+package storm_externalips
 
 import (
-	"errors"
+	//"errors"
 	"fmt"
 	//marathon "github.com/gambol99/go-marathon"
 	//kapi "golang.org/x/build/kubernetes/api"
@@ -11,10 +11,11 @@ import (
 	//"net"
 	"bytes"
 	"encoding/json"
-	"github.com/pivotal-cf/brokerapi"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pivotal-cf/brokerapi"
 	//"crypto/sha1"
 	//"encoding/base64"
 	//"text/template"
@@ -30,16 +31,15 @@ import (
 	kapi "k8s.io/kubernetes/pkg/api/v1"
 
 	oshandler "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/handler"
-	"github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper_pvc"
+	//"github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper"
+	//"github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper"
 )
 
 //==============================================================
 //
 //==============================================================
 
-// WAERNING: the development of this service broker is not finished yet!
-
-const StormServcieBrokerName_Standalone = "Storm_volumes_standalone"
+const StormServcieBrokerName_Standalone = "Storm_externalips_standalone"
 
 func init() {
 	oshandler.Register(StormServcieBrokerName_Standalone, &Storm_freeHandler{})
@@ -108,20 +108,23 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceBrokerNamespace := oshandler.OC().Namespace()
 	//stormUser := oshandler.NewElevenLengthID()
 	//stormPassword := oshandler.GenGUID()
-	zookeeperUser := "super" // oshandler.NewElevenLengthID()
-	zookeeperPassword := oshandler.GenGUID()
-
-	serviceInfo.Url = instanceIdInTempalte
-	serviceInfo.Database = serviceBrokerNamespace // may be not needed
-	//serviceInfo.User = stormUser
-	//serviceInfo.Password = stormPassword
-	serviceInfo.Admin_user = zookeeperUser
-	serviceInfo.Admin_password = zookeeperPassword
+	//zookeeperUser := "super" // oshandler.NewElevenLengthID()
+	//zookeeperPassword := oshandler.GenGUID()
 
 	println()
 	println("instanceIdInTempalte = ", instanceIdInTempalte)
 	println("serviceBrokerNamespace = ", serviceBrokerNamespace)
 	println()
+
+	serviceInfo.Url = instanceIdInTempalte
+	serviceInfo.Database = serviceBrokerNamespace // may be not needed
+	//serviceInfo.User = stormUser
+	//serviceInfo.Password = stormPassword
+	//serviceInfo.Admin_user = zookeeperUser
+	//serviceInfo.Admin_password = zookeeperPassword
+	// .Miscs = map[string]string{}
+
+	// ...
 
 	go func() {
 		err := <-etcdSaveResult
@@ -136,12 +139,13 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		//	return serviceSpec, serviceInfo, err
 		//}
 		// nimbus zookeeper
-		output, err := zookeeper_pvc.CreateZookeeperResources_Master(instanceIdInTempalte, serviceBrokerNamespace, zookeeperUser, zookeeperPassword, nil)
-		if err != nil {
-			zookeeper_pvc.DestroyZookeeperResources_Master(output, serviceBrokerNamespace)
 
-			return
-		}
+		//output, err := CreateZookeeperResources_Master(instanceIdInTempalte, serviceBrokerNamespace, zookeeperUser, zookeeperPassword)
+		//if err != nil {
+		//	DestroyZookeeperResources_Master(output, serviceBrokerNamespace)
+		//	
+		//	return
+		//}
 
 		startStormOrchestrationJob(&stormOrchestrationJob{
 			cancelled:  false,
@@ -149,7 +153,7 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 
 			stormHandler:       handler,
 			serviceInfo:        &serviceInfo,
-			zookeeperResources: output,
+			//zookeeperResources: output,
 		})
 
 	}()
@@ -157,8 +161,7 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 	serviceSpec.DashboardURL = ""
 
 	//>>>
-	// storm pvc has not implemented yet.
-	// serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
+	serviceSpec.Credentials = getCredentialsOnPrivision(&serviceInfo)
 	//<<<
 
 	return serviceSpec, serviceInfo, nil
@@ -179,7 +182,15 @@ func (handler *Storm_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 	// the job may be finished or interrupted or running in another instance.
 
 	nimbus_res, _ := getStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database)             //, myServiceInfo.User, myServiceInfo.Password)
-	uisuperviser_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
+	uisuperviserdrps_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
+
+	//nodeport := oshandler.GetServicePortByName(&nimbus_res.nodeport, "storm-nimbus-port")
+	//if nodeport == nil || nodeport.NodePort < 0 {
+	//	return brokerapi.LastOperation{
+	//		State:       brokerapi.InProgress,
+	//		Description: "In progress ..",
+	//	}, nil
+	//}
 
 	//ok := func(rc *kapi.ReplicationController) bool {
 	//	if rc == nil || rc.Name == "" || rc.Spec.Replicas == nil || rc.Status.Replicas < *rc.Spec.Replicas {
@@ -197,7 +208,7 @@ func (handler *Storm_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 
 	//println("num_ok_rcs = ", num_ok_rcs)
 
-	if ok(&nimbus_res.rc) && ok(&uisuperviser_res.superviserrc) && ok(&uisuperviser_res.uirc) {
+	if ok(&nimbus_res.rc) && ok(&uisuperviserdrps_res.superviserrc) && ok(&uisuperviserdrps_res.uirc)  && ok(&uisuperviserdrps_res.drpcrc) {
 		return brokerapi.LastOperation{
 			State:       brokerapi.Succeeded,
 			Description: "Succeeded!",
@@ -211,7 +222,7 @@ func (handler *Storm_Handler) DoLastOperation(myServiceInfo *oshandler.ServiceIn
 }
 
 func (handler *Storm_Handler) DoUpdate(myServiceInfo *oshandler.ServiceInfo, planInfo oshandler.PlanInfo, callbackSaveNewInfo func(*oshandler.ServiceInfo) error, asyncAllowed bool) error {
-	return errors.New("not implemented")
+	return nil
 }
 
 func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo, asyncAllowed bool) (brokerapi.IsAsync, error) {
@@ -231,10 +242,10 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 
 		// ...
 
-		println("to destroy zookeeper resources")
-
-		zookeeper_res, _ := zookeeper_pvc.GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, nil)
-		zookeeper_pvc.DestroyZookeeperResources_Master(zookeeper_res, myServiceInfo.Database)
+		//println("to destroy zookeeper resources")
+		//
+		//zookeeper_res, _ := GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password)
+		//DestroyZookeeperResources_Master(zookeeper_res, myServiceInfo.Database)
 
 		// ...
 
@@ -243,17 +254,57 @@ func (handler *Storm_Handler) DoDeprovision(myServiceInfo *oshandler.ServiceInfo
 		nimbus_res, _ := getStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
 		destroyStormResources_Nimbus(nimbus_res, myServiceInfo.Database)
 
-		uisuperviser_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
-		destroyStormResources_UiSuperviser(uisuperviser_res, myServiceInfo.Database)
+		uisuperviserdrps_res, _ := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
+		destroyStormResources_UiSuperviser(uisuperviserdrps_res, myServiceInfo.Database)
 	}()
 
 	return brokerapi.IsAsync(false), nil
 }
 
-func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
-	// todo: handle errors
+// please note: the bsi may be still not fully initialized when calling the function.
+func getCredentialsOnPrivision(myServiceInfo *oshandler.ServiceInfo) oshandler.Credentials {
+	
+	var uisuperviserdrps_res stormResources_UiSuperviserDrps
+	err := loadStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database /*, stormUser, stormPassword*/, &uisuperviserdrps_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
 
-	zookeeper_res, err := zookeeper_pvc.GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password, nil)
+	ui_host := uisuperviserdrps_res.uiroute.Spec.Host
+	ui_port := "80"
+
+	var nimbus_res stormResources_Nimbus
+	err = loadStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database /*, stormUser, stormPassword*/, &nimbus_res)
+	if err != nil {
+		return oshandler.Credentials{}
+	}
+
+	storm_nimbus_port := oshandler.GetServicePortByName(&nimbus_res.service, "storm-nimbus-port")
+	if storm_nimbus_port == nil {
+		return oshandler.Credentials{}
+	}
+
+	host := fmt.Sprintf("%s.%s.%s", nimbus_res.service.Name, myServiceInfo.Database, oshandler.ServiceDomainSuffix(false))
+	port := strconv.Itoa(storm_nimbus_port.Port)
+	//host := nimbus_res.routeMQ.Spec.Host
+	//port := "80"
+
+	externalips := oshandler.RandomNodeAddress()
+
+	return oshandler.Credentials{
+		Uri:      fmt.Sprintf("storm-nimbus (internal): %s:%s storm-UI: %s:%s", host, port, ui_host, ui_port),
+		Hostname: externalips,
+		Port:     port,
+		//Username: myServiceInfo.User,
+		//Password: myServiceInfo.Password,
+		// todo: need return zookeeper password?
+	}
+}
+
+func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindingID string, details brokerapi.BindDetails) (brokerapi.Binding, oshandler.Credentials, error) {
+	/*
+	// todo: handle errors
+	zookeeper_res, err := zookeeper.GetZookeeperResources_Master(myServiceInfo.Url, myServiceInfo.Database, myServiceInfo.Admin_user, myServiceInfo.Admin_password)
 	if err != nil {
 		return brokerapi.Binding{}, oshandler.Credentials{}, err
 	}
@@ -263,12 +314,12 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 		return brokerapi.Binding{}, oshandler.Credentials{}, nil
 	}
 
-	uisuperviser_res, err := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
+	uisuperviserdrps_res, err := getStormResources_UiSuperviser(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
 	if err != nil {
 		return brokerapi.Binding{}, oshandler.Credentials{}, err
 	}
 
-	ui_host := uisuperviser_res.uiroute.Spec.Host
+	ui_host := uisuperviserdrps_res.uiroute.Spec.Host
 	ui_port := "80"
 
 	nimbus_res, err := getStormResources_Nimbus(myServiceInfo.Url, myServiceInfo.Database) //, myServiceInfo.User, myServiceInfo.Password)
@@ -294,6 +345,9 @@ func (handler *Storm_Handler) DoBind(myServiceInfo *oshandler.ServiceInfo, bindi
 		//Password: myServiceInfo.Password,
 		// todo: need return zookeeper password?
 	}
+	*/
+
+	mycredentials := getCredentialsOnPrivision(myServiceInfo)
 
 	myBinding := brokerapi.Binding{Credentials: mycredentials}
 
@@ -347,7 +401,7 @@ type stormOrchestrationJob struct {
 
 	serviceInfo *oshandler.ServiceInfo
 
-	zookeeperResources *zookeeper_pvc.ZookeeperResources_Master
+	//zookeeperResources *ZookeeperResources_Master
 	nimbusResources    *stormResources_Nimbus
 }
 
@@ -362,36 +416,10 @@ func (job *stormOrchestrationJob) cancel() {
 }
 
 func (job *stormOrchestrationJob) run() {
-	println("-- stormOrchestrationJob start --")
 
-	result, cancel, err := zookeeper_pvc.WatchZookeeperOrchestration(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password, nil)
-	if err != nil {
-		zookeeper_res, _ := zookeeper_pvc.GetZookeeperResources_Master(job.serviceInfo.Url, job.serviceInfo.Database, job.serviceInfo.Admin_user, job.serviceInfo.Admin_password, nil)
-		zookeeper_pvc.DestroyZookeeperResources_Master(zookeeper_res, job.serviceInfo.Database)
-		return
-	}
+	println("  to create storm numbus resources")
 
-	var succeeded bool
-	select {
-	case <-job.cancelChan:
-		close(cancel)
-		return
-	case succeeded = <-result:
-		close(cancel)
-		break
-	}
-
-	println("-- stormOrchestrationJob done, succeeded:", succeeded)
-
-	if !succeeded {
-		zookeeper_pvc.DestroyZookeeperResources_Master(job.zookeeperResources, job.serviceInfo.Database)
-		return
-	}
-
-	// ...
-
-	println("  to create storm nimbus resources")
-
+	var err error
 	job.nimbusResources, err = job.createStormResources_Nimbus(job.serviceInfo.Url, job.serviceInfo.Database) //, job.serviceInfo.User, job.serviceInfo.Password)
 	if err != nil {
 		// todo: add job.handler for other service brokers
@@ -438,17 +466,17 @@ func (job *stormOrchestrationJob) run() {
 		return
 	}
 
-	time.Sleep(10 * time.Second) // maybe numbus is not fullly inited yet
+	time.Sleep(15 * time.Second) // maybe numbus is not fullly inited yet
 
 	if job.cancelled {
 		return
 	}
 
-	println("  to create storm ui+supervisor resources")
+	println("  to create storm ui+supervisor+drps resources")
 
-	err = job.createStormResources_UiSuperviser(job.serviceInfo.Url, job.serviceInfo.Database) //, job.serviceInfo.User, job.serviceInfo.Password)
+	err = job.createStormResources_UiSuperviserDrpc(job.serviceInfo.Url, job.serviceInfo.Database) //, job.serviceInfo.User, job.serviceInfo.Password)
 	if err != nil {
-		logger.Error("createStormResources_UiSuperviser", err)
+		logger.Error("createStormResources_UiSuperviserDrpc", err)
 	}
 }
 
@@ -468,7 +496,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 		if err != nil {
 			return err
 		}
-		storm_image := oshandler.StormImage()
+		storm_image := oshandler.StormExternalIpsImage()
 		storm_image = strings.TrimSpace(storm_image)
 		if len(storm_image) > 0 {
 			StormTemplateData_Nimbus = bytes.Replace(
@@ -485,8 +513,18 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
-		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
-	yamlTemplates = bytes.Replace(yamlTemplates, []byte("dnsmasq*****"), []byte(oshandler.DnsmasqServer()), -1)
+		[]byte(serviceBrokerNamespace+oshandler.ServiceDomainSuffix(true)), -1)
+	//yamlTemplates = bytes.Replace(yamlTemplates, []byte("dnsmasq*****"), []byte(oshandler.DnsmasqServer()), -1)
+
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server1*****"), []byte(oshandler.ExternalZookeeperServer(0)), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server2*****"), []byte(oshandler.ExternalZookeeperServer(1)), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server3*****"), []byte(oshandler.ExternalZookeeperServer(2)), -1)
+	
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("externalips*****"), []byte(oshandler.RandomNodeAddress()), -1)
+	
+	//  "externalIPs" : ['Apple', 'Orange', 'Strawberry', 'Mango']
+
+	// oshandler.RandomNodeAddress()
 
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
@@ -495,6 +533,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 	decoder := oshandler.NewYamlDecoder(yamlTemplates)
 	decoder.
 		Decode(&res.service).
+		//Decode(&res.nodeport).
 		Decode(&res.rc)
 
 	return decoder.Err
@@ -502,7 +541,7 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 
 var StormTemplateData_UiSuperviser []byte = nil
 
-func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stormUser, stormPassword*/ string, res *stormResources_UiSuperviser) error {
+func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stormUser, stormPassword*/ string, res *stormResources_UiSuperviserDrps) error {
 	if StormTemplateData_UiSuperviser == nil {
 		f, err := os.Open("storm-ui-supervisor.yaml")
 		if err != nil {
@@ -512,7 +551,7 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 		if err != nil {
 			return err
 		}
-		storm_image := oshandler.StormImage()
+		storm_image := oshandler.StormExternalIpsImage()
 		storm_image = strings.TrimSpace(storm_image)
 		if len(storm_image) > 0 {
 			StormTemplateData_UiSuperviser = bytes.Replace(
@@ -538,8 +577,14 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("instanceid"), []byte(instanceID), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("local-service-postfix-place-holder"),
-		[]byte(serviceBrokerNamespace + oshandler.ServiceDomainSuffix(true)), -1)
+		[]byte(serviceBrokerNamespace+oshandler.ServiceDomainSuffix(true)), -1)
 
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server1*****"), []byte(oshandler.ExternalZookeeperServer(0)), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server2*****"), []byte(oshandler.ExternalZookeeperServer(1)), -1)
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("external-zookeeper-server3*****"), []byte(oshandler.ExternalZookeeperServer(2)), -1)
+	
+	yamlTemplates = bytes.Replace(yamlTemplates, []byte("externalips*****"), []byte(oshandler.RandomNodeAddress()), -1)
+	
 	//println("========= Boot yamlTemplates ===========")
 	//println(string(yamlTemplates))
 	//println()
@@ -549,22 +594,28 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 		Decode(&res.superviserrc).
 		Decode(&res.uiservice).
 		Decode(&res.uiroute).
-		Decode(&res.uirc)
+		Decode(&res.uirc).
+		Decode(&res.drpcservice).
+		Decode(&res.drpcrc)
 
 	return decoder.Err
 }
 
 type stormResources_Nimbus struct {
-	service kapi.Service
-	rc      kapi.ReplicationController
+	service  kapi.Service
+	//nodeport kapi.Service
+	rc       kapi.ReplicationController
 }
 
-type stormResources_UiSuperviser struct {
+type stormResources_UiSuperviserDrps struct {
 	superviserrc kapi.ReplicationController
 
 	uiservice kapi.Service
 	uiroute   routeapi.Route
 	uirc      kapi.ReplicationController
+
+	drpcservice kapi.Service
+	drpcrc      kapi.ReplicationController
 }
 
 func (job *stormOrchestrationJob) createStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) (*stormResources_Nimbus, error) {
@@ -594,6 +645,10 @@ func (job *stormOrchestrationJob) createStormResources_Nimbus(instanceId, servic
 	if err != nil {
 		return &output, err
 	}
+	//err = job.kpost(serviceBrokerNamespace, "services", &input.nodeport, &output.nodeport)
+	//if err != nil {
+	//	return &output, err
+	//}
 	err = job.kpost(serviceBrokerNamespace, "replicationcontrollers", &input.rc, &output.rc)
 	if err != nil {
 		return &output, err
@@ -629,6 +684,7 @@ func getStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, 
 	prefix := "/namespaces/" + serviceBrokerNamespace
 	osr.
 		KGet(prefix+"/services/"+input.service.Name, &output.service).
+		//KGet(prefix+"/services/"+input.nodeport.Name, &output.nodeport).
 		KGet(prefix+"/replicationcontrollers/"+input.rc.Name, &output.rc)
 
 	if osr.Err != nil {
@@ -639,14 +695,15 @@ func getStormResources_Nimbus(instanceId, serviceBrokerNamespace /*, stormUser, 
 }
 
 func destroyStormResources_Nimbus(nimbusRes *stormResources_Nimbus, serviceBrokerNamespace string) {
-	// todo: add to retry queue on fail
+	// todo: add to retry queue on failnodeport
 
 	go func() { kdel(serviceBrokerNamespace, "services", nimbusRes.service.Name) }()
+	//go func() { kdel(serviceBrokerNamespace, "services", nimbusRes.nodeport.Name) }()
 	go func() { kdel_rc(serviceBrokerNamespace, &nimbusRes.rc) }()
 }
 
-func (job *stormOrchestrationJob) createStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) error {
-	var input stormResources_UiSuperviser
+func (job *stormOrchestrationJob) createStormResources_UiSuperviserDrpc(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) error {
+	var input stormResources_UiSuperviserDrps
 
 	err := loadStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/, &input)
 	if err != nil {
@@ -654,7 +711,7 @@ func (job *stormOrchestrationJob) createStormResources_UiSuperviser(instanceId, 
 		return err
 	}
 
-	var output stormResources_UiSuperviser
+	var output stormResources_UiSuperviserDrps
 	/*
 		osr := oshandler.NewOpenshiftREST(oshandler.OC())
 
@@ -674,6 +731,7 @@ func (job *stormOrchestrationJob) createStormResources_UiSuperviser(instanceId, 
 		if err := job.kpost(serviceBrokerNamespace, "replicationcontrollers", &input.superviserrc, &output.superviserrc); err != nil {
 			return
 		}
+
 		if err := job.kpost(serviceBrokerNamespace, "services", &input.uiservice, &output.uiservice); err != nil {
 			return
 		}
@@ -683,15 +741,22 @@ func (job *stormOrchestrationJob) createStormResources_UiSuperviser(instanceId, 
 		if err := job.kpost(serviceBrokerNamespace, "replicationcontrollers", &input.uirc, &output.uirc); err != nil {
 			return
 		}
+
+		if err := job.kpost(serviceBrokerNamespace, "services", &input.uiservice, &output.drpcservice); err != nil {
+			return
+		}
+		if err := job.kpost(serviceBrokerNamespace, "replicationcontrollers", &input.uirc, &output.drpcrc); err != nil {
+			return
+		}
 	}()
 
 	return nil
 }
 
-func getStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) (*stormResources_UiSuperviser, error) {
-	var output stormResources_UiSuperviser
+func getStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/ string) (*stormResources_UiSuperviserDrps, error) {
+	var output stormResources_UiSuperviserDrps
 
-	var input stormResources_UiSuperviser
+	var input stormResources_UiSuperviserDrps
 	err := loadStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, stormUser, stormPassword*/, &input)
 	if err != nil {
 		return &output, err
@@ -704,7 +769,9 @@ func getStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, storm
 		KGet(prefix+"/replicationcontrollers/"+input.superviserrc.Name, &output.superviserrc).
 		KGet(prefix+"/services/"+input.uiservice.Name, &output.uiservice).
 		OGet(prefix+"/routes/"+input.uiroute.Name, &output.uiroute).
-		KGet(prefix+"/replicationcontrollers/"+input.uirc.Name, &output.uirc)
+		KGet(prefix+"/replicationcontrollers/"+input.uirc.Name, &output.uirc).
+		KGet(prefix+"/services/"+input.drpcservice.Name, &output.drpcservice).
+		KGet(prefix+"/replicationcontrollers/"+input.drpcrc.Name, &output.drpcrc)
 
 	if osr.Err != nil {
 		logger.Error("getStormResources_UiSuperviser", osr.Err)
@@ -713,13 +780,15 @@ func getStormResources_UiSuperviser(instanceId, serviceBrokerNamespace /*, storm
 	return &output, osr.Err
 }
 
-func destroyStormResources_UiSuperviser(uisuperviserRes *stormResources_UiSuperviser, serviceBrokerNamespace string) {
+func destroyStormResources_UiSuperviser(uisuperviserRes *stormResources_UiSuperviserDrps, serviceBrokerNamespace string) {
 	// todo: add to retry queue on fail
-
+	// todo: the anonymous function wrappers are not essential.
 	go func() { kdel_rc(serviceBrokerNamespace, &uisuperviserRes.superviserrc) }()
 	go func() { kdel_rc(serviceBrokerNamespace, &uisuperviserRes.uirc) }()
+	go func() { kdel_rc(serviceBrokerNamespace, &uisuperviserRes.drpcrc) }()
 	go func() { odel(serviceBrokerNamespace, "routes", uisuperviserRes.uiroute.Name) }()
 	go func() { kdel(serviceBrokerNamespace, "services", uisuperviserRes.uiservice.Name) }()
+	go func() { kdel(serviceBrokerNamespace, "services", uisuperviserRes.drpcservice.Name) }()
 }
 
 //===============================================================

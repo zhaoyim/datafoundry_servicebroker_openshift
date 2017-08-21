@@ -41,7 +41,7 @@ type ServiceInfo struct {
 	Volumes []Volume `json:"volumes,omitempty"`
 
 	// for different bs, the meaning is different
-	// Miscs map[string]string `json:"miscs,omitempty"`
+	Miscs map[string]string `json:"miscs,omitempty"`
 }
 
 type Volume struct {
@@ -277,6 +277,28 @@ func Neo4jVolumeImage() string {
 	return neo4jVolumeImage
 }
 
+func StormExternalIpsImage() string {
+	return stormExternalIpsImage
+}
+
+//func DfExternalIPs() string {
+//	return externalIPs
+//}
+
+func ExternalZookeeperServer(n int) string {
+	if len(externalZookeeperServers) == 0 {
+		return ""
+	}
+	if n < 0 {
+		n = 0
+	}
+	if n >= len(externalZookeeperServers) {
+		n = len(externalZookeeperServers) - 1
+	}
+	return externalZookeeperServers[n]
+}
+
+
 var theOC *OpenshiftClient
 
 var svcDomainSuffix string
@@ -309,6 +331,9 @@ var elasticsearchVolumeImage string
 var mongoVolumeImage string
 var kafkaVolumeImage string
 var neo4jVolumeImage string
+var stormExternalIpsImage string
+
+var externalZookeeperServers []string
 
 func init() {
 	theOC = newOpenshiftClient(
@@ -351,4 +376,9 @@ func init() {
 	mongoVolumeImage = getenv("MONGOVOLUMEIMAGE")
 	kafkaVolumeImage = getenv("KAFKAVOLUMEIMAGE")
 	neo4jVolumeImage = getenv("NEO4JVOLUMEIMAGE")
+	stormExternalIpsImage = getenv("STORMEXTERNALIPSIMAGE")
+
+	//externalIPs = getenv("EXTERNALSIPS")
+
+	externalZookeeperServers = strings.Split(getenv("EXTERNALZOOKEEPERSERVERS"), ",")
 }
