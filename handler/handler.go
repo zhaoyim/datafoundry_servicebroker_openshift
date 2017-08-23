@@ -170,6 +170,14 @@ func ServiceDomainSuffix(prefixedWithDot bool) string {
 	return svcDomainSuffix
 }
 
+func EndPointSuffix() string {
+	return endpointSuffix
+}
+
+func DnsmasqServer() string {
+	return dnsmasqServer
+}
+
 func RandomNodeAddress() string {
 	if len(nodeAddresses) == 0 {
 		return ""
@@ -177,12 +185,31 @@ func RandomNodeAddress() string {
 	return nodeAddresses[mathrand.Intn(len(nodeAddresses))]
 }
 
-func DnsmasqServer() string {
-	return dnsmasqServer
+func RandomNodeDomain() string {
+	if len(nodeDemains) == 0 {
+		return ""
+	}
+	return nodeDemains[mathrand.Intn(len(nodeDemains))]
 }
 
-func EndPointSuffix() string {
-	return endpointSuffix
+func NodeDomain(n int) string {
+	if len(nodeDemains) == 0 {
+		return ""
+	}
+	if n < 0 || n >= len(nodeDemains) {
+		n = 0
+	}
+	return nodeDemains[n]
+}
+
+func ExternalZookeeperServer(n int) string {
+	if len(externalZookeeperServers) == 0 {
+		return ""
+	}
+	if n < 0 || n >= len(externalZookeeperServers) {
+		n = 0
+	}
+	return externalZookeeperServers[n]
 }
 
 func EtcdImage() string {
@@ -277,26 +304,13 @@ func Neo4jVolumeImage() string {
 	return neo4jVolumeImage
 }
 
-func StormExternalIpsImage() string {
-	return stormExternalIpsImage
+func StormExternalImage() string {
+	return stormExternalImage
 }
 
 //func DfExternalIPs() string {
 //	return externalIPs
 //}
-
-func ExternalZookeeperServer(n int) string {
-	if len(externalZookeeperServers) == 0 {
-		return ""
-	}
-	if n < 0 {
-		n = 0
-	}
-	if n >= len(externalZookeeperServers) {
-		n = len(externalZookeeperServers) - 1
-	}
-	return externalZookeeperServers[n]
-}
 
 
 var theOC *OpenshiftClient
@@ -305,8 +319,11 @@ var svcDomainSuffix string
 var endpointSuffix string
 var svcDomainSuffixWithDot string
 
+var dnsmasqServer string // may be useless now.
+
 var nodeAddresses []string
-var dnsmasqServer string
+var nodeDemains []string
+var externalZookeeperServers []string
 
 var etcdImage string
 var etcdVolumeImage string
@@ -331,9 +348,7 @@ var elasticsearchVolumeImage string
 var mongoVolumeImage string
 var kafkaVolumeImage string
 var neo4jVolumeImage string
-var stormExternalIpsImage string
-
-var externalZookeeperServers []string
+var stormExternalImage string
 
 func init() {
 	theOC = newOpenshiftClient(
@@ -348,10 +363,13 @@ func init() {
 		svcDomainSuffix = "svc.cluster.local"
 	}
 	svcDomainSuffixWithDot = "." + svcDomainSuffix
+	
+	endpointSuffix = getenv("ENDPOINTSUFFIX")
+	dnsmasqServer = getenv("DNSMASQ_SERVER")
 
 	nodeAddresses = strings.Split(getenv("NODE_ADDRESSES"), ",")
-	dnsmasqServer = getenv("DNSMASQ_SERVER")
-	endpointSuffix = getenv("ENDPOINTSUFFIX")
+	nodeDemains = strings.Split(getenv("NODE_DOMAINS"), ",")
+	externalZookeeperServers = strings.Split(getenv("EXTERNALZOOKEEPERSERVERS"), ",")
 
 	etcdImage = getenv("ETCDIMAGE")
 	etcdbootImage = getenv("ETCDBOOTIMAGE")
@@ -376,9 +394,5 @@ func init() {
 	mongoVolumeImage = getenv("MONGOVOLUMEIMAGE")
 	kafkaVolumeImage = getenv("KAFKAVOLUMEIMAGE")
 	neo4jVolumeImage = getenv("NEO4JVOLUMEIMAGE")
-	stormExternalIpsImage = getenv("STORMEXTERNALIPSIMAGE")
-
-	//externalIPs = getenv("EXTERNALSIPS")
-
-	externalZookeeperServers = strings.Split(getenv("EXTERNALZOOKEEPERSERVERS"), ",")
+	stormExternalImage = getenv("STORMEXTERNALIMAGE")
 }

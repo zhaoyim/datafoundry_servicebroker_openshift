@@ -50,7 +50,7 @@ import (
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/zookeeper_pvc"
 
 	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/redissingle_pvc"
-	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/storm_externalips"
+	_ "github.com/asiainfoLDP/datafoundry_servicebroker_openshift/servicebroker/storm_external"
 )
 
 type myServiceBroker struct {

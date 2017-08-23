@@ -1,5 +1,4 @@
 
-
 apiVersion: v1
 kind: ReplicationController
 metadata:
@@ -29,8 +28,12 @@ spec:
           value: "external-zookeeper-server2*****"
         - name: ZK_SERVER_3_SERVICE_HOST
           value: "external-zookeeper-server3*****"
+        - name: APACHE_STORM_ZK_ROOT
+          value: "zk-root*****"
         - name: APACHE_STORM_NIMBUS_SERVICE_HOST
-          value: sb-instanceid-sn
+          value: "storm-local-hostname*****"
+        - name: APACHE_STORM_NIMBUS_SERVICE_PORT
+          value: "thrift-port*****"
         volumeMounts:
         - name: storm-data
           mountPath: /opt/apache-storm/storm-local
@@ -50,8 +53,6 @@ spec:
   ports:
   - protocol: TCP
     port: 8080
-  externalIPs:
-  - externalips*****
 
 ---
 
@@ -100,8 +101,12 @@ spec:
           value: "external-zookeeper-server2*****"
         - name: ZK_SERVER_3_SERVICE_HOST
           value: "external-zookeeper-server3*****"
+        - name: APACHE_STORM_ZK_ROOT
+          value: "zk-root*****"
         - name: APACHE_STORM_NIMBUS_SERVICE_HOST
-          value: sb-instanceid-sn
+          value: "storm-local-hostname*****"
+        - name: APACHE_STORM_NIMBUS_SERVICE_PORT
+          value: "thrift-port*****"
         volumeMounts:
         - name: storm-data
           mountPath: /opt/apache-storm/storm-local
@@ -121,8 +126,7 @@ spec:
   ports:
   - protocol: TCP
     port: 3772
-  externalIPs:
-  - externalips*****
+  type: NodePort
 
 ---
 
@@ -157,8 +161,12 @@ spec:
           value: "external-zookeeper-server2*****"
         - name: ZK_SERVER_3_SERVICE_HOST
           value: "external-zookeeper-server3*****"
+        - name: APACHE_STORM_ZK_ROOT
+          value: "zk-root*****"
         - name: APACHE_STORM_NIMBUS_SERVICE_HOST
-          value: sb-instanceid-sn
+          value: "storm-local-hostname*****"
+        - name: APACHE_STORM_NIMBUS_SERVICE_PORT
+          value: "thrift-port*****"
         volumeMounts:
         - name: storm-data
           mountPath: /opt/apache-storm/storm-local
