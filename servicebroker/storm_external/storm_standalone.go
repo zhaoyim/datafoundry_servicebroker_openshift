@@ -210,7 +210,7 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 			//zookeeperResources: output,
 
 			nimbusNodePort: nimbus.serviceNodePort.Spec.Ports[0].NodePort,
-			drpcNodePort:   others.drpcserviceNodePort.Spec.Ports[0].NodePort,
+			drpcNodePort:   others.drpcserviceNodePort.Spec.Ports[0].NodePort, // useless, to remove
 		})
 
 	}()
@@ -583,6 +583,9 @@ func loadStormResources_Nimbus(instanceID, serviceBrokerNamespace /*, stormUser,
 	if strings.TrimSpace(stormLocalHostname) == "" {
 		stormLocalHostname = "whatever"
 	}
+	if thriftPort == 0 {
+		thriftPort = 12345
+	}
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("zk-root*****"), []byte(BuildStormZkEntryRoot(instanceID)), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("storm-local-hostname*****"), []byte(stormLocalHostname), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("thrift-port*****"), []byte(strconv.Itoa(thriftPort)), -1)
@@ -650,6 +653,9 @@ func loadStormResources_UiSuperviser(instanceID, serviceBrokerNamespace /*, stor
 	
 	if strings.TrimSpace(stormLocalHostname) == "" {
 		stormLocalHostname = "whatever"
+	}
+	if thriftPort == 0 {
+		thriftPort = 12345
 	}
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("zk-root*****"), []byte(BuildStormZkEntryRoot(instanceID)), -1)
 	yamlTemplates = bytes.Replace(yamlTemplates, []byte("storm-local-hostname*****"), []byte(stormLocalHostname), -1)
