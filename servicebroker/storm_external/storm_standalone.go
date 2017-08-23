@@ -40,7 +40,7 @@ import (
 //
 //==============================================================
 
-const StormServcieBrokerName_Standalone = "Storm_externalips_standalone"
+const StormServcieBrokerName_Standalone = "Storm_external_standalone"
 
 func init() {
 	oshandler.Register(StormServcieBrokerName_Standalone, &Storm_freeHandler{})
@@ -210,7 +210,6 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 			//zookeeperResources: output,
 
 			nimbusNodePort: nimbus.serviceNodePort.Spec.Ports[0].NodePort,
-			drpcNodePort:   others.drpcserviceNodePort.Spec.Ports[0].NodePort, // useless, to remove
 		})
 
 	}()
@@ -460,7 +459,6 @@ type stormOrchestrationJob struct {
 	nimbusResources    *stormResources_Nimbus
 	
 	nimbusNodePort int
-	drpcNodePort   int
 }
 
 func (job *stormOrchestrationJob) cancel() {
