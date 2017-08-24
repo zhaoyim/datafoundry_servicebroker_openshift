@@ -158,7 +158,8 @@ func (handler *Storm_Handler) DoProvision(etcdSaveResult chan error, instanceID 
 		return serviceSpec, oshandler.ServiceInfo{}, err
 	}
 
-	var others *stormResources_UiSuperviserDrps
+	// var others *stormResources_UiSuperviserDrps
+	others := &stormResources_UiSuperviserDrps{}
 	err = loadStormResources_UiSuperviser(
 		serviceInfo.Url,
 		serviceInfo.Database,
